@@ -3,7 +3,7 @@
 
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:crypto/crypto.dart';
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:convert/convert.dart';
 import '../models/nostr_event.dart';
 
@@ -17,11 +17,9 @@ class NostrCrypto {
   
   /// Calculate SHA256 hash of bytes
   static Uint8List sha256Bytes(List<int> data) {
-    final digest = sha256Hash.convert(data);
+    final digest = crypto.sha256.convert(data);
     return Uint8List.fromList(digest.bytes);
   }
-  
-  static final sha256Hash = sha256;
   
   /// Generate a random 32-byte private key
   static String generatePrivateKey() {

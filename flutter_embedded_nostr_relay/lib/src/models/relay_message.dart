@@ -9,6 +9,9 @@ import 'filter.dart';
 abstract class RelayMessage extends Equatable {
   String get type;
   
+  /// Base constructor for RelayMessage subclasses
+  const RelayMessage();
+  
   /// Serialize message to JSON array format
   List<dynamic> toJsonArray();
   
@@ -51,10 +54,10 @@ class EventMessage extends RelayMessage {
   final String subscriptionId;
   final NostrEvent event;
   
-  EventMessage({
+  const EventMessage({
     required this.subscriptionId,
     required this.event,
-  });
+  }) : super();
   
   factory EventMessage.fromJsonArray(List<dynamic> json) {
     if (json.length < 3) {
@@ -82,10 +85,10 @@ class ReqMessage extends RelayMessage {
   final String subscriptionId;
   final List<Filter> filters;
   
-  ReqMessage({
+  const ReqMessage({
     required this.subscriptionId,
     required this.filters,
-  });
+  }) : super();
   
   factory ReqMessage.fromJsonArray(List<dynamic> json) {
     if (json.length < 3) {
@@ -123,7 +126,7 @@ class ReqMessage extends RelayMessage {
 class CloseMessage extends RelayMessage {
   final String subscriptionId;
   
-  CloseMessage({required this.subscriptionId});
+  const CloseMessage({required this.subscriptionId}) : super();
   
   factory CloseMessage.fromJsonArray(List<dynamic> json) {
     if (json.length < 2) {
@@ -147,7 +150,7 @@ class CloseMessage extends RelayMessage {
 class EoseMessage extends RelayMessage {
   final String subscriptionId;
   
-  EoseMessage({required this.subscriptionId});
+  const EoseMessage({required this.subscriptionId}) : super();
   
   factory EoseMessage.fromJsonArray(List<dynamic> json) {
     if (json.length < 2) {
@@ -173,11 +176,11 @@ class OkMessage extends RelayMessage {
   final bool accepted;
   final String message;
   
-  OkMessage({
+  const OkMessage({
     required this.eventId,
     required this.accepted,
     required this.message,
-  });
+  }) : super();
   
   factory OkMessage.fromJsonArray(List<dynamic> json) {
     if (json.length < 4) {
@@ -205,7 +208,7 @@ class OkMessage extends RelayMessage {
 class NoticeMessage extends RelayMessage {
   final String message;
   
-  NoticeMessage({required this.message});
+  const NoticeMessage({required this.message}) : super();
   
   factory NoticeMessage.fromJsonArray(List<dynamic> json) {
     if (json.length < 2) {
@@ -229,7 +232,7 @@ class NoticeMessage extends RelayMessage {
 class AuthMessage extends RelayMessage {
   final String challenge;
   
-  AuthMessage({required this.challenge});
+  const AuthMessage({required this.challenge}) : super();
   
   factory AuthMessage.fromJsonArray(List<dynamic> json) {
     if (json.length < 2) {
@@ -254,10 +257,10 @@ class CountMessage extends RelayMessage {
   final String subscriptionId;
   final int count;
   
-  CountMessage({
+  const CountMessage({
     required this.subscriptionId,
     required this.count,
-  });
+  }) : super();
   
   factory CountMessage.fromJsonArray(List<dynamic> json) {
     if (json.length < 3) {

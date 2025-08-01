@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 import '../models/nostr_event.dart';
 import '../models/filter.dart';
 import '../models/subscription.dart';

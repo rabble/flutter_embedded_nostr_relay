@@ -3,8 +3,15 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart';
+import 'package:flutter_embedded_nostr_relay/src/storage/database_helper.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  
+  // Enable test mode for database
+  setUpAll(() {
+    DatabaseHelper.enableTestMode();
+  });
   group('NostrEvent', () {
     test('creates valid event', () {
       final event = NostrEvent.create(
@@ -107,6 +114,7 @@ void main() {
     late EmbeddedNostrRelay relay;
     
     setUp(() async {
+      await DatabaseHelper.reset(); // Reset database between tests
       relay = EmbeddedNostrRelay();
       await relay.initialize();
     });
@@ -127,12 +135,15 @@ void main() {
         content: 'Test event',
       );
       
-      final published = await relay.publish(event);
+      // Add dummy signature for test
+      final signedEvent = event.copyWith(sig: 'test_signature');
+      
+      final published = await relay.publish(signedEvent);
       expect(published, true);
       
-      final retrieved = await relay.getEvent(event.id);
+      final retrieved = await relay.getEvent(signedEvent.id);
       expect(retrieved, isNotNull);
-      expect(retrieved!.id, event.id);
+      expect(retrieved!.id, signedEvent.id);
       expect(retrieved.content, 'Test event');
     });
     
@@ -146,7 +157,9 @@ void main() {
           content: 'Event $i',
           createdAt: 1000 + i,
         );
-        await relay.publish(event);
+        // Add dummy signature for test
+        final signedEvent = event.copyWith(sig: 'test_signature_$i');
+        await relay.publish(signedEvent);
       }
       
       // Query with filter
@@ -183,7 +196,9 @@ void main() {
         tags: [],
         content: 'Live event',
       );
-      await relay.publish(event);
+      // Add dummy signature for test
+      final signedEvent = event.copyWith(sig: 'test_signature_live');
+      await relay.publish(signedEvent);
       
       // Wait for event propagation
       await Future.delayed(Duration(milliseconds: 100));

@@ -9,7 +9,7 @@ part of 'nostr_event.dart';
 NostrEvent _$NostrEventFromJson(Map<String, dynamic> json) => NostrEvent(
   id: json['id'] as String,
   pubkey: json['pubkey'] as String,
-  createdAt: (json['createdAt'] as num).toInt(),
+  createdAt: (json['created_at'] as num).toInt(),
   kind: (json['kind'] as num).toInt(),
   tags: (json['tags'] as List<dynamic>)
       .map((e) => (e as List<dynamic>).map((e) => e as String).toList())
@@ -22,7 +22,7 @@ Map<String, dynamic> _$NostrEventToJson(NostrEvent instance) =>
     <String, dynamic>{
       'id': instance.id,
       'pubkey': instance.pubkey,
-      'createdAt': instance.createdAt,
+      'created_at': instance.createdAt,
       'kind': instance.kind,
       'tags': instance.tags,
       'content': instance.content,

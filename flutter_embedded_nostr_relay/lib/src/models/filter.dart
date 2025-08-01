@@ -97,7 +97,8 @@ class Filter extends Equatable {
     }
     
     // Check time range
-    final createdAt = event['created_at'] as int;
+    final createdAt = event['created_at'] as int?;
+    if (createdAt == null) return false; // Invalid event without timestamp
     if (since != null && createdAt < since!) return false;
     if (until != null && createdAt > until!) return false;
     
@@ -137,22 +138,20 @@ class Filter extends Equatable {
   bool _matchesTags(Map<String, dynamic> event, String tagName, List<String> values) {
     final eventTags = event['tags'] as List<dynamic>;
     
+    // OR logic: if any filter value matches any event tag, return true
     for (final value in values) {
-      bool found = false;
       for (final tag in eventTags) {
         if (tag is List && 
             tag.isNotEmpty && 
             tag[0] == tagName &&
             tag.length > 1 &&
             tag[1] == value) {
-          found = true;
-          break;
+          return true;
         }
       }
-      if (!found) return false;
     }
     
-    return true;
+    return false;
   }
 
   /// Create a copy with updated fields

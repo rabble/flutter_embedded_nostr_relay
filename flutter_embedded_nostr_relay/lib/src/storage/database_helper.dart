@@ -12,8 +12,22 @@ import '../utils/logger.dart';
 class DatabaseHelper {
   static Database? _database;
   static final DatabaseHelper instance = DatabaseHelper._();
+  static bool _testMode = false;
   
   DatabaseHelper._();
+  
+  /// Enable test mode to use in-memory database
+  static void enableTestMode() {
+    _testMode = true;
+  }
+  
+  /// Reset for testing
+  static Future<void> reset() async {
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+  }
   
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -22,16 +36,22 @@ class DatabaseHelper {
   }
   
   Future<Database> _initDatabase() async {
-    // Initialize FFI for desktop platforms
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    // Initialize FFI for desktop platforms or test mode
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS || _testMode) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }
     
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final path = join(documentsDirectory.path, RelayConstants.databaseName);
-    
-    RelayLogger.db('init', 'Opening database at $path');
+    late String path;
+    if (_testMode) {
+      // Use in-memory database for tests
+      path = inMemoryDatabasePath;
+      RelayLogger.db('init', 'Opening in-memory database for tests');
+    } else {
+      final documentsDirectory = await getApplicationDocumentsDirectory();
+      path = join(documentsDirectory.path, RelayConstants.databaseName);
+      RelayLogger.db('init', 'Opening database at $path');
+    }
     
     return await openDatabase(
       path,

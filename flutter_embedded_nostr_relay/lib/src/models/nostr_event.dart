@@ -12,6 +12,7 @@ part 'nostr_event.g.dart';
 class NostrEvent extends Equatable {
   final String id;
   final String pubkey;
+  @JsonKey(name: 'created_at')
   final int createdAt;
   final int kind;
   final List<List<String>> tags;
@@ -158,6 +159,27 @@ class NostrEvent extends Equatable {
   /// Check if this event mentions a pubkey
   bool mentions(String pubkey) {
     return mentionedPubkeys.contains(pubkey);
+  }
+
+  /// Create a copy of this event with updated fields
+  NostrEvent copyWith({
+    String? id,
+    String? pubkey,
+    int? createdAt,
+    int? kind,
+    List<List<String>>? tags,
+    String? content,
+    String? sig,
+  }) {
+    return NostrEvent(
+      id: id ?? this.id,
+      pubkey: pubkey ?? this.pubkey,
+      createdAt: createdAt ?? this.createdAt,
+      kind: kind ?? this.kind,
+      tags: tags ?? this.tags,
+      content: content ?? this.content,
+      sig: sig ?? this.sig,
+    );
   }
 
   @override
