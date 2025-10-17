@@ -1,0 +1,10 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libfiletime-ea3718037a5fee09.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/mod.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/utimes.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/macos.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libfiletime-ea3718037a5fee09.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/mod.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/utimes.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/macos.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/filetime-ea3718037a5fee09.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/mod.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/utimes.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/macos.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/mod.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/utimes.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/macos.rs:

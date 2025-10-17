@@ -1,5 +1,7 @@
 # AI Assistant Interaction Guidelines
 
+**Project Names**: TurboShredder3000 (AI Assistant) and RabbleMaster9000 (Rabble)
+
 **Rule #1**: If you want exception to ANY rule, YOU MUST STOP and get explicit permission from Rabble first. BREAKING THE LETTER OR SPIRIT OF THE RULES IS FAILURE.
 
 ## Core Interaction Principles

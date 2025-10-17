@@ -5,6 +5,7 @@ library flutter_embedded_nostr_relay;
 
 // Core exports
 export 'src/core/embedded_nostr_relay.dart';
+export 'src/core/subscription_manager.dart';
 export 'src/core/constants.dart';
 
 // Model exports
@@ -13,6 +14,9 @@ export 'src/models/filter.dart';
 export 'src/models/relay_info.dart';
 export 'src/models/subscription.dart';
 export 'src/models/relay_message.dart';
+export 'src/models/relay_metadata.dart';
+export 'src/models/relay_list.dart';
+export 'src/models/relay_list_manager.dart';
 
 // Network exports
 export 'src/network/websocket_server.dart' 
@@ -34,3 +38,7 @@ export 'src/storage/database_helper.dart';
 // Utils exports
 export 'src/utils/crypto.dart';
 export 'src/utils/logger.dart';
+
+// Tor exports (optional, conditional on build)
+export 'src/tor/tor_config.dart';
+export 'src/tor/tor_support.dart';

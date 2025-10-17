@@ -1,0 +1,31 @@
+[package]
+name = "arti_ffi"
+version = "0.1.0"
+edition = "2021"
+description = "FFI wrapper for Arti Tor client"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+# Arti dependencies (using latest stable versions from July 2025)
+arti = "1.4"
+arti-client = "0.32"
+tor-rtcompat = "0.32"
+tokio = { version = "1", features = ["full"] }
+libc = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[build-dependencies]
+cbindgen = "0.26"
+
+# Platform-specific dependencies
+[target.'cfg(target_os = "android")']
+[dependencies.jni]
+version = "0.21"
+optional = true
+
+[features]
+default = []
+android-logging = ["jni"]

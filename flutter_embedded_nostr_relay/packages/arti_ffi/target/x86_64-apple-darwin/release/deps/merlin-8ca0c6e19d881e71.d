@@ -1,0 +1,10 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/libmerlin-8ca0c6e19d881e71.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/constants.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/strobe.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/transcript.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/libmerlin-8ca0c6e19d881e71.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/constants.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/strobe.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/transcript.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/merlin-8ca0c6e19d881e71.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/constants.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/strobe.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/transcript.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/constants.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/strobe.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/merlin-3.0.0/src/transcript.rs:

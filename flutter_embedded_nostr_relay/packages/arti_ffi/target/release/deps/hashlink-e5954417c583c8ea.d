@@ -1,0 +1,10 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libhashlink-e5954417c583c8ea.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/linked_hash_map.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/linked_hash_set.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/lru_cache.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libhashlink-e5954417c583c8ea.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/linked_hash_map.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/linked_hash_set.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/lru_cache.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/hashlink-e5954417c583c8ea.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/linked_hash_map.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/linked_hash_set.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/lru_cache.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/linked_hash_map.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/linked_hash_set.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hashlink-0.10.0/src/lru_cache.rs:

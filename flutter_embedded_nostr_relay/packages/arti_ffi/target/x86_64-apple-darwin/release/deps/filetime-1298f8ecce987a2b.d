@@ -1,0 +1,10 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/libfiletime-1298f8ecce987a2b.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/mod.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/utimes.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/macos.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/libfiletime-1298f8ecce987a2b.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/mod.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/utimes.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/macos.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/filetime-1298f8ecce987a2b.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/mod.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/utimes.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/macos.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/mod.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/utimes.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/filetime-0.2.25/src/unix/macos.rs:

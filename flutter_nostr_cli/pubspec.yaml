@@ -1,0 +1,47 @@
+# ABOUTME: Configuration file for the flutter_nostr CLI tool package
+# ABOUTME: Defines dependencies, executable, and package metadata for developer tooling
+name: flutter_nostr_cli
+description: CLI tool for Flutter apps with embedded Nostr relay - scaffolding, debugging, and development utilities
+version: 0.1.0
+repository: https://github.com/OpenVine/flutter_embedded_nostr_relay
+issue_tracker: https://github.com/OpenVine/flutter_embedded_nostr_relay/issues
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  # Core CLI framework
+  args: ^2.5.0
+  io: ^1.0.4
+  path: ^1.9.0
+  
+  # File system operations
+  file: ^7.0.0
+  
+  # HTTP requests for remote operations
+  http: ^1.2.2
+  
+  # JSON handling
+  dart_style: ^2.3.7
+  
+  # Logging and output
+  ansi_styles: ^0.3.2+1
+  
+  # Templating
+  mustache_template: ^2.0.0
+  
+  # Web socket for relay testing
+  web_socket_channel: ^3.0.1
+  
+  # Crypto for event validation
+  crypto: ^3.0.5
+  convert: ^3.1.2
+
+dev_dependencies:
+  test: ^1.25.8
+  test_process: ^2.1.0
+  mockito: ^5.4.5
+  build_runner: ^2.4.13
+
+executables:
+  flutter_nostr: flutter_nostr_cli

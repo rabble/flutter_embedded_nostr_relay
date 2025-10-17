@@ -1,0 +1,10 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libthiserror-d7affd107325bc06.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/aserror.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/display.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/var.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libthiserror-d7affd107325bc06.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/aserror.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/display.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/var.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/thiserror-d7affd107325bc06.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/aserror.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/display.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/var.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/aserror.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/display.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.12/src/var.rs:

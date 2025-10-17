@@ -6,26 +6,141 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'filter.g.dart';
 
+/// Represents a Nostr filter for querying events according to NIP-01.
+/// 
+/// Filters are used in REQ messages to specify which events a client wants
+/// to receive. Multiple filters in a single subscription work with OR logic,
+/// meaning an event matches if it satisfies ANY of the filters.
+/// 
+/// ## Basic Usage
+/// 
+/// ```dart
+/// // Get text notes from specific users
+/// final filter = Filter(
+///   kinds: [1],
+///   authors: ['pubkey1', 'pubkey2'],
+///   limit: 50,
+/// );
+/// 
+/// // Get recent events mentioning me
+/// final mentionsFilter = Filter(
+///   pTags: [myPubkey],
+///   since: DateTime.now().subtract(Duration(hours: 24))
+///       .millisecondsSinceEpoch ~/ 1000,
+/// );
+/// 
+/// final subscription = relay.subscribe(
+///   filters: [filter, mentionsFilter],
+///   onEvent: (event) => processEvent(event),
+/// );
+/// ```
+/// 
+/// ## Filter Criteria
+/// 
+/// All filter criteria use AND logic within a single filter:
+/// - [ids]: Match specific event IDs
+/// - [authors]: Match events from specific public keys
+/// - [kinds]: Match specific event kinds
+/// - [since]/[until]: Match events in time range
+/// - [limit]: Maximum number of events to return
+/// - Tag filters ([eTags], [pTags], etc.): Match events with specific tags
+/// 
+/// ## Tag Filtering
+/// 
+/// Common tag filters are provided as dedicated fields:
+/// - [eTags]: Filter by referenced event IDs (#e tags)
+/// - [pTags]: Filter by mentioned public keys (#p tags)  
+/// - [aTags]: Filter by coordinate references (#a tags)
+/// - [dTags]: Filter by identifier tags (#d tags)
+/// 
+/// For custom tags, use the [tags] map:
+/// ```dart
+/// final filter = Filter(
+///   tags: {
+///     '#t': ['bitcoin', 'nostr'],  // Topic tags
+///     '#r': ['wss://relay.com'],   // Relay references
+///   },
+/// );
+/// ```
+/// 
+/// ## Performance Considerations
+/// 
+/// - Use [limit] to avoid retrieving too many events
+/// - Prefer filtering by indexed fields ([authors], [kinds]) when possible
+/// - Be specific with time ranges using [since] and [until]
+/// - Tag filters may be slower than other criteria
 @JsonSerializable(includeIfNull: false)
 class Filter extends Equatable {
+  /// List of event IDs to match (exact matches only).
+  /// 
+  /// When specified, only events with IDs in this list will be returned.
+  /// This is useful for fetching specific events by their IDs.
   final List<String>? ids;
+  
+  /// List of author public keys to match.
+  /// 
+  /// When specified, only events created by authors whose public keys
+  /// are in this list will be returned. Uses OR logic between multiple authors.
   final List<String>? authors;
+  
+  /// List of event kinds to match.
+  /// 
+  /// When specified, only events with kinds in this list will be returned.
+  /// Common kinds: 0 (metadata), 1 (text note), 3 (contacts), 4 (DM), etc.
   final List<int>? kinds;
+  
+  /// Generic tag filters using a map of tag names to value lists.
+  /// 
+  /// The key should include the # prefix (e.g., '#t' for topic tags).
+  /// Use the dedicated tag fields ([eTags], [pTags], etc.) when available
+  /// as they're more convenient.
   final Map<String, List<String>>? tags;
+  
+  /// Unix timestamp - only return events created at or after this time.
+  /// 
+  /// Used to filter events by creation date. Combine with [until] to
+  /// specify a time range.
   final int? since;
+  
+  /// Unix timestamp - only return events created at or before this time.
+  /// 
+  /// Used to filter events by creation date. Combine with [since] to
+  /// specify a time range.
   final int? until;
+  
+  /// Maximum number of events to return.
+  /// 
+  /// Relays should return the most recent events (highest created_at values)
+  /// up to this limit. Always use a reasonable limit to avoid overwhelming
+  /// clients and relays.
   final int? limit;
   
-  // Custom tags support - #e, #p, #a, etc.
+  /// Filter by events that reference other events (e-tags).
+  /// 
+  /// Only returns events that have an 'e' tag with a value in this list.
+  /// Useful for finding replies, reactions, or other references to specific events.
   @JsonKey(name: '#e')
   final List<String>? eTags;
   
+  /// Filter by events that mention users (p-tags).
+  /// 
+  /// Only returns events that have a 'p' tag with a pubkey in this list.
+  /// Useful for finding mentions, replies, or other references to specific users.
   @JsonKey(name: '#p')
   final List<String>? pTags;
   
+  /// Filter by coordinate-style references (a-tags).
+  /// 
+  /// Only returns events that have an 'a' tag with a value in this list.
+  /// Coordinates have the format "kind:pubkey:d-tag" and are used to reference
+  /// parameterized replaceable events.
   @JsonKey(name: '#a')
   final List<String>? aTags;
   
+  /// Filter by identifier tags (d-tags).
+  /// 
+  /// Only returns events that have a 'd' tag with a value in this list.
+  /// D-tags are used as identifiers for parameterized replaceable events.
   @JsonKey(name: '#d')
   final List<String>? dTags;
 
@@ -79,7 +194,28 @@ class Filter extends Equatable {
     return json;
   }
 
-  /// Check if an event matches this filter
+  /// Check if an event matches this filter.
+  /// 
+  /// Tests all filter criteria against the provided event using AND logic.
+  /// All specified criteria must match for the method to return true.
+  /// 
+  /// Parameters:
+  /// - [event]: Event data as a JSON map (not NostrEvent object)
+  /// 
+  /// Returns `true` if the event matches all filter criteria, `false` otherwise.
+  /// 
+  /// Example:
+  /// ```dart
+  /// final filter = Filter(kinds: [1], limit: 10);
+  /// final eventJson = myEvent.toJson();
+  /// 
+  /// if (filter.matches(eventJson)) {
+  ///   print('Event matches filter');
+  /// }
+  /// ```
+  /// 
+  /// Note: This method expects event data in JSON format, not a NostrEvent object.
+  /// Use `event.toJson()` to convert a NostrEvent to the required format.
   bool matches(Map<String, dynamic> event) {
     // Check IDs
     if (ids != null && ids!.isNotEmpty) {

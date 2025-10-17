@@ -28,7 +28,16 @@ abstract class RelayMessage extends Equatable {
     
     switch (messageType.toUpperCase()) {
       case 'EVENT':
-        return EventMessage.fromJsonArray(json);
+        // Handle both client-to-relay and relay-to-client EVENT formats
+        if (json.length == 2) {
+          // Client-to-relay format: ["EVENT", event]
+          return ClientEventMessage.fromJsonArray(json);
+        } else if (json.length >= 3) {
+          // Relay-to-client format: ["EVENT", subscription_id, event]
+          return EventMessage.fromJsonArray(json);
+        } else {
+          throw FormatException('EVENT message has invalid format');
+        }
       case 'REQ':
         return ReqMessage.fromJsonArray(json);
       case 'CLOSE':
@@ -49,7 +58,7 @@ abstract class RelayMessage extends Equatable {
   }
 }
 
-/// EVENT message - Sent by relays to clients
+/// EVENT message - Sent by relays to clients (with subscription ID)
 class EventMessage extends RelayMessage {
   final String subscriptionId;
   final NostrEvent event;
@@ -78,6 +87,34 @@ class EventMessage extends RelayMessage {
   
   @override
   List<Object?> get props => [subscriptionId, event];
+}
+
+/// CLIENT_EVENT message - Sent by clients to relays (without subscription ID)
+class ClientEventMessage extends RelayMessage {
+  final NostrEvent event;
+  
+  const ClientEventMessage({
+    required this.event,
+  }) : super();
+  
+  factory ClientEventMessage.fromJsonArray(List<dynamic> json) {
+    if (json.length < 2) {
+      throw FormatException('CLIENT_EVENT message must have at least 2 elements');
+    }
+    
+    return ClientEventMessage(
+      event: NostrEvent.fromJson(json[1] as Map<String, dynamic>),
+    );
+  }
+  
+  @override
+  String get type => 'CLIENT_EVENT';
+  
+  @override
+  List<dynamic> toJsonArray() => ['EVENT', event.toJson()];
+  
+  @override
+  List<Object?> get props => [event];
 }
 
 /// REQ message - Sent by clients to request events

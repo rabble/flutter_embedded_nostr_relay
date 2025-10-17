@@ -1,0 +1,11 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/libwyz-d9afd9de821df541.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/bidi.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/comu.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/fmt.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/range.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/libwyz-d9afd9de821df541.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/bidi.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/comu.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/fmt.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/range.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/wyz-d9afd9de821df541.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/bidi.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/comu.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/fmt.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/range.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/bidi.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/comu.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/fmt.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wyz-0.5.1/src/range.rs:

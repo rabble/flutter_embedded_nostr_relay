@@ -1,0 +1,11 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libsafelog-a27ffb09b526df63.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/err.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/flags.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/impls.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/../README.md
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libsafelog-a27ffb09b526df63.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/err.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/flags.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/impls.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/../README.md
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/safelog-a27ffb09b526df63.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/err.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/flags.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/impls.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/../README.md
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/err.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/flags.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/impls.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/safelog-0.4.7/src/../README.md:

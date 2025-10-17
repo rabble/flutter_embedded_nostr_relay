@@ -1,0 +1,8 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libserde_with_macros-be44a16ea679458d.dylib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/apply.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/lazy_bool.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/utils.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/serde_with_macros-be44a16ea679458d.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/apply.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/lazy_bool.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/utils.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/apply.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/lazy_bool.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_with_macros-3.14.0/src/utils.rs:

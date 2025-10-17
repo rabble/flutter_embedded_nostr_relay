@@ -1,0 +1,10 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/liboverload-6078cda38fdc72c4.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/unary.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/assignment.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/binary.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/liboverload-6078cda38fdc72c4.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/unary.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/assignment.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/binary.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/overload-6078cda38fdc72c4.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/unary.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/assignment.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/binary.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/unary.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/assignment.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/overload-0.1.1/src/binary.rs:

@@ -1,0 +1,447 @@
+// ABOUTME: TDD tests for bidirectional event version synchronization
+// ABOUTME: Tests event version comparison and relay push-back logic
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
+import 'package:mockito/annotations.dart';
+
+import 'package:flutter_embedded_nostr_relay/src/network/event_version_sync_handler.dart';
+import 'package:flutter_embedded_nostr_relay/src/storage/event_store.dart';
+import 'package:flutter_embedded_nostr_relay/src/network/external_relay_client.dart';
+import 'package:flutter_embedded_nostr_relay/src/models/nostr_event.dart';
+import 'package:flutter_embedded_nostr_relay/src/utils/crypto.dart';
+
+import 'event_version_sync_handler_test.mocks.dart';
+
+@GenerateMocks([EventStore, ExternalRelayClient])
+void main() {
+  group('EventVersionSyncHandler', () {
+    late EventVersionSyncHandler syncHandler;
+    late MockEventStore mockEventStore;
+    late MockExternalRelayClient mockRelayClient;
+    
+    // Test keys
+    final testPrivateKey = NostrCrypto.generatePrivateKey();
+    final testPublicKey = NostrCrypto.getPublicKey(testPrivateKey);
+    
+    setUp(() {
+      mockEventStore = MockEventStore();
+      mockRelayClient = MockExternalRelayClient();
+      syncHandler = EventVersionSyncHandler(
+        eventStore: mockEventStore,
+        relayClient: mockRelayClient,
+      );
+    });
+    
+    group('Regular Events (kind < 10000)', () {
+      test('should store new event when we dont have it', () async {
+        // Arrange
+        final newEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 1,
+          content: 'Test note',
+          tags: [],
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getEventById(newEvent.id))
+            .thenAnswer((_) async => null);
+        when(mockEventStore.storeEvent(newEvent))
+            .thenAnswer((_) async => true);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(newEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.stored));
+        verify(mockEventStore.storeEvent(newEvent)).called(1);
+        verifyNever(mockRelayClient.sendEvent(any));
+      });
+      
+      test('should reject duplicate event with same ID', () async {
+        // Arrange
+        final existingEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 1,
+          content: 'Test note',
+          tags: [],
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getEventById(existingEvent.id))
+            .thenAnswer((_) async => existingEvent);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(existingEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.duplicate));
+        verifyNever(mockEventStore.storeEvent(any));
+        verifyNever(mockRelayClient.sendEvent(any));
+      });
+      
+      test('should detect protocol violation when same ID has different content', () async {
+        // Arrange
+        final originalEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 1,
+          content: 'Original content',
+          tags: [],
+        );
+        
+        // Create malicious event with same ID but different content
+        final maliciousEvent = NostrEvent.fromJson({
+          'id': originalEvent.id,
+          'pubkey': testPublicKey,
+          'kind': 1,
+          'content': 'Different content', // This should never happen!
+          'tags': [],
+          'created_at': originalEvent.createdAt,
+          'sig': 'invalid_signature',
+        });
+        
+        when(mockEventStore.getEventById(originalEvent.id))
+            .thenAnswer((_) async => originalEvent);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(maliciousEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.protocolViolation));
+        expect(result.reason, contains('same ID different content'));
+        verifyNever(mockEventStore.storeEvent(any));
+        verifyNever(mockRelayClient.sendEvent(any));
+      });
+    });
+    
+    group('Replaceable Events (kind 10000-19999)', () {
+      test('should store newer replaceable event', () async {
+        // Arrange
+        final olderEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 10000,
+          content: 'Old version',
+          tags: [],
+          createdAt: 1000,
+        ).sign(testPrivateKey);
+        
+        final newerEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 10000,
+          content: 'New version',
+          tags: [],
+          createdAt: 2000,
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getEventById(newerEvent.id))
+            .thenAnswer((_) async => null);
+        when(mockEventStore.getLatestReplaceableEvent(10000, testPublicKey))
+            .thenAnswer((_) async => olderEvent);
+        when(mockEventStore.storeEvent(newerEvent))
+            .thenAnswer((_) async => true);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(newerEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.stored));
+        expect(result.reason, contains('newer version'));
+        verify(mockEventStore.storeEvent(newerEvent)).called(1);
+        verifyNever(mockRelayClient.sendEvent(any));
+      });
+      
+      test('should push back our newer version and reject older incoming', () async {
+        // Arrange
+        final newerLocalEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 10000,
+          content: 'Newer local version',
+          tags: [],
+          createdAt: 2000,
+        ).sign(testPrivateKey);
+        
+        final olderIncomingEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 10000,
+          content: 'Older incoming version',
+          tags: [],
+          createdAt: 1000,
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getEventById(olderIncomingEvent.id))
+            .thenAnswer((_) async => null);
+        when(mockEventStore.getLatestReplaceableEvent(10000, testPublicKey))
+            .thenAnswer((_) async => newerLocalEvent);
+        when(mockRelayClient.sendEvent(newerLocalEvent))
+            .thenAnswer((_) async => true);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(olderIncomingEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.pushedBackNewer));
+        expect(result.reason, contains('pushed newer version'));
+        verify(mockRelayClient.sendEvent(newerLocalEvent)).called(1);
+        verifyNever(mockEventStore.storeEvent(olderIncomingEvent));
+      });
+      
+      test('should ignore same timestamp replaceable events', () async {
+        // Arrange
+        final localEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 10000,
+          content: 'Local version',
+          tags: [],
+          createdAt: 1500,
+        ).sign(testPrivateKey);
+        
+        final incomingEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 10000,
+          content: 'Incoming version',
+          tags: [],
+          createdAt: 1500,
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getEventById(incomingEvent.id))
+            .thenAnswer((_) async => null);
+        when(mockEventStore.getLatestReplaceableEvent(10000, testPublicKey))
+            .thenAnswer((_) async => localEvent);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(incomingEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.sameVersion));
+        verifyNever(mockEventStore.storeEvent(any));
+        verifyNever(mockRelayClient.sendEvent(any));
+      });
+    });
+    
+    group('Parameterized Replaceable Events (kind 30000-39999)', () {
+      test('should store newer parameterized replaceable with same d-tag', () async {
+        // Arrange
+        final dTag = 'article-slug';
+        final olderEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 30023,
+          content: 'Old article content',
+          tags: [['d', dTag]],
+          createdAt: 1000,
+        ).sign(testPrivateKey);
+        
+        final newerEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 30023,
+          content: 'Updated article content',
+          tags: [['d', dTag]],
+          createdAt: 2000,
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getEventById(newerEvent.id))
+            .thenAnswer((_) async => null);
+        when(mockEventStore.getLatestParameterizedReplaceableEvent(
+          30023, testPublicKey, dTag))
+            .thenAnswer((_) async => olderEvent);
+        when(mockEventStore.storeEvent(newerEvent))
+            .thenAnswer((_) async => true);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(newerEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.stored));
+        verify(mockEventStore.storeEvent(newerEvent)).called(1);
+        verifyNever(mockRelayClient.sendEvent(any));
+      });
+      
+      test('should store parameterized replaceable with different d-tag', () async {
+        // Arrange
+        final existingEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 30023,
+          content: 'Article 1',
+          tags: [['d', 'article-1']],
+          createdAt: 1000,
+        ).sign(testPrivateKey);
+        
+        final newEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 30023,
+          content: 'Article 2',
+          tags: [['d', 'article-2']],
+          createdAt: 1500,
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getLatestParameterizedReplaceableEvent(
+          30023, testPublicKey, 'article-2'))
+            .thenAnswer((_) async => null);
+        when(mockEventStore.storeEvent(newEvent))
+            .thenAnswer((_) async => true);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(newEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.stored));
+        verify(mockEventStore.storeEvent(newEvent)).called(1);
+      });
+      
+      test('should push back newer parameterized replaceable', () async {
+        // Arrange
+        final dTag = 'shared-article';
+        final newerLocalEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 30023,
+          content: 'Newer local article',
+          tags: [['d', dTag]],
+          createdAt: 2000,
+        ).sign(testPrivateKey);
+        
+        final olderIncomingEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 30023,
+          content: 'Older incoming article',
+          tags: [['d', dTag]],
+          createdAt: 1000,
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getLatestParameterizedReplaceableEvent(
+          30023, testPublicKey, dTag))
+            .thenAnswer((_) async => newerLocalEvent);
+        when(mockRelayClient.sendEvent(newerLocalEvent))
+            .thenAnswer((_) async => true);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(olderIncomingEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.pushedBackNewer));
+        verify(mockRelayClient.sendEvent(newerLocalEvent)).called(1);
+        verifyNever(mockEventStore.storeEvent(olderIncomingEvent));
+      });
+    });
+    
+    group('Ephemeral Events (kind 20000-29999)', () {
+      test('should not store ephemeral events but still process them', () async {
+        // Arrange
+        final ephemeralEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 20000,
+          content: 'Ephemeral message',
+          tags: [],
+        ).sign(testPrivateKey);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(ephemeralEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.ephemeralProcessed));
+        verifyNever(mockEventStore.storeEvent(any));
+        verifyNever(mockRelayClient.sendEvent(any));
+      });
+    });
+    
+    group('Error Handling', () {
+      test('should handle storage errors gracefully', () async {
+        // Arrange
+        final event = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 1,
+          content: 'Test',
+          tags: [],
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getEventById(event.id))
+            .thenAnswer((_) async => null);
+        when(mockEventStore.storeEvent(event))
+            .thenThrow(Exception('Storage error'));
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(event);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.error));
+        expect(result.reason, contains('Storage error'));
+      });
+      
+      test('should handle relay send errors gracefully', () async {
+        // Arrange
+        final newerLocalEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 10000,
+          content: 'Newer local',
+          tags: [],
+          createdAt: 2000,
+        ).sign(testPrivateKey);
+        
+        final olderIncomingEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 10000,
+          content: 'Older incoming',
+          tags: [],
+          createdAt: 1000,
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getLatestReplaceableEvent(10000, testPublicKey))
+            .thenAnswer((_) async => newerLocalEvent);
+        when(mockRelayClient.sendEvent(newerLocalEvent))
+            .thenThrow(Exception('Relay send error'));
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(olderIncomingEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.error));
+        expect(result.reason, contains('Failed to push back'));
+      });
+    });
+    
+    group('Edge Cases', () {
+      test('should handle events with missing d-tag for parameterized replaceable', () async {
+        // Arrange
+        final eventWithoutDTag = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 30023,
+          content: 'Article without d-tag',
+          tags: [], // No d-tag
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getLatestParameterizedReplaceableEvent(
+          30023, testPublicKey, ''))
+            .thenAnswer((_) async => null);
+        when(mockEventStore.storeEvent(eventWithoutDTag))
+            .thenAnswer((_) async => true);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(eventWithoutDTag);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.stored));
+        verify(mockEventStore.getLatestParameterizedReplaceableEvent(
+          30023, testPublicKey, '')).called(1);
+      });
+      
+      test('should handle very old timestamps gracefully', () async {
+        // Arrange
+        final veryOldEvent = NostrEvent.create(
+          pubkey: testPublicKey,
+          kind: 1,
+          content: 'Very old event',
+          tags: [],
+          createdAt: 1, // Very old timestamp
+        ).sign(testPrivateKey);
+        
+        when(mockEventStore.getEventById(veryOldEvent.id))
+            .thenAnswer((_) async => null);
+        when(mockEventStore.storeEvent(veryOldEvent))
+            .thenAnswer((_) async => true);
+        
+        // Act
+        final result = await syncHandler.handleIncomingEvent(veryOldEvent);
+        
+        // Assert
+        expect(result.action, equals(SyncAction.stored));
+        verify(mockEventStore.storeEvent(veryOldEvent)).called(1);
+      });
+    });
+  });
+}

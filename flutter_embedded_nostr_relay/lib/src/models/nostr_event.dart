@@ -8,15 +8,139 @@ import '../utils/crypto.dart';
 
 part 'nostr_event.g.dart';
 
+/// Represents a Nostr event according to NIP-01.
+/// 
+/// A NostrEvent is the fundamental data structure in the Nostr protocol.
+/// Every event contains an ID, public key of the author, timestamp, kind,
+/// tags, content, and cryptographic signature.
+/// 
+/// ## Event Types
+/// 
+/// Events are categorized by their `kind` field:
+/// - `0`: Metadata (user profiles)
+/// - `1`: Text notes (tweets/posts)
+/// - `2`: Recommend relay
+/// - `3`: Contacts (following list)
+/// - `4`: Encrypted direct messages
+/// - `5`: Event deletion
+/// - `6`: Reposts
+/// - `7`: Reactions
+/// - `10000-19999`: Replaceable events
+/// - `20000-29999`: Ephemeral events (not stored)
+/// - `30000-39999`: Parameterized replaceable events
+/// 
+/// ## Creating Events
+/// 
+/// ```dart
+/// // Create an unsigned event
+/// final event = NostrEvent.create(
+///   pubkey: userPublicKey,
+///   kind: 1,
+///   content: 'Hello, Nostr!',
+///   tags: [
+///     ['t', 'hello'],        // Topic tag
+///     ['p', friendPubkey],   // Mention a user
+///   ],
+/// );
+/// 
+/// // Sign the event
+/// final signedEvent = event.sign(userPrivateKey);
+/// 
+/// // Verify the event
+/// print(signedEvent.isValid); // true
+/// ```
+/// 
+/// ## Event Validation
+/// 
+/// Events are automatically validated when created and can be verified:
+/// - ID must match SHA256 hash of serialized event data
+/// - Signature must be valid for the event ID and public key
+/// - All required fields must be present
+/// 
+/// ## Replaceable Events
+/// 
+/// Some event kinds are replaceable, meaning newer events from the same
+/// author replace older ones:
+/// 
+/// ```dart
+/// if (event.isReplaceable) {
+///   print('This event can be replaced by newer versions');
+/// }
+/// 
+/// if (event.isParameterizedReplaceable) {
+///   print('D-tag: ${event.dTagValue}');
+/// }
+/// ```
+/// 
+/// ## Tags and References
+/// 
+/// Events can reference other events and users through tags:
+/// 
+/// ```dart
+/// // Get all mentioned users
+/// final mentionedUsers = event.mentionedPubkeys;
+/// 
+/// // Get all referenced events
+/// final referencedEvents = event.referencedEventIds;
+/// 
+/// // Check if event mentions a specific user
+/// if (event.mentions(userPubkey)) {
+///   print('This event mentions you!');
+/// }
+/// ```
 @JsonSerializable()
 class NostrEvent extends Equatable {
+  /// Unique identifier for this event (32-byte lowercase hex).
+  /// 
+  /// The ID is calculated as the SHA256 hash of the serialized event data
+  /// according to NIP-01. This ensures events cannot be tampered with
+  /// without invalidating the ID.
   final String id;
+  
+  /// Public key of the event author (32-byte lowercase hex).
+  /// 
+  /// This identifies who created and signed the event. The corresponding
+  /// private key must be used to generate a valid signature.
   final String pubkey;
+  
+  /// Unix timestamp when the event was created (seconds since epoch).
+  /// 
+  /// This should represent when the event was actually created by the author,
+  /// not when it was received by the relay.
   @JsonKey(name: 'created_at')
   final int createdAt;
+  
+  /// Event kind determining the event type and how it should be interpreted.
+  /// 
+  /// Common kinds:
+  /// - 0: Metadata/profile
+  /// - 1: Text note
+  /// - 3: Contact list
+  /// - 4: Encrypted DM
+  /// - 5: Deletion request
+  /// - 6: Repost
+  /// - 7: Reaction
   final int kind;
+  
+  /// Array of tags providing additional event metadata.
+  /// 
+  /// Each tag is an array of strings where the first element is the tag name:
+  /// - ['e', eventId]: References another event
+  /// - ['p', pubkey]: References/mentions a user
+  /// - ['t', topic]: Topic/hashtag
+  /// - ['d', identifier]: Identifier for parameterized replaceable events
   final List<List<String>> tags;
+  
+  /// The main content of the event.
+  /// 
+  /// For text notes this is the message text. For other event types this
+  /// might be JSON data or empty. The interpretation depends on the event kind.
   final String content;
+  
+  /// Schnorr signature of the event ID (64-byte lowercase hex).
+  /// 
+  /// This proves the event was created by the holder of the private key
+  /// corresponding to the public key. The signature covers the event ID.
   final String sig;
 
   const NostrEvent({
@@ -34,7 +158,32 @@ class NostrEvent extends Equatable {
 
   Map<String, dynamic> toJson() => _$NostrEventToJson(this);
 
-  /// Create a new unsigned event
+  /// Create a new unsigned event.
+  /// 
+  /// This factory constructor creates an event with a calculated ID but no
+  /// signature. The event must be signed with [sign] before it can be published.
+  /// 
+  /// The event ID is calculated according to NIP-01 by hashing the serialized
+  /// event data: `[0, pubkey, created_at, kind, tags, content]`.
+  /// 
+  /// Parameters:
+  /// - [pubkey]: Author's public key (32-byte hex string)
+  /// - [kind]: Event type (see class documentation for common kinds)
+  /// - [tags]: Array of tag arrays for metadata
+  /// - [content]: Main event content
+  /// - [createdAt]: Unix timestamp (defaults to current time)
+  /// 
+  /// Example:
+  /// ```dart
+  /// final event = NostrEvent.create(
+  ///   pubkey: '1234567890abcdef...',
+  ///   kind: 1,
+  ///   content: 'Hello, world!',
+  ///   tags: [['t', 'greeting']],
+  /// );
+  /// 
+  /// final signedEvent = event.sign(privateKey);
+  /// ```
   factory NostrEvent.create({
     required String pubkey,
     required int kind,
@@ -68,7 +217,28 @@ class NostrEvent extends Equatable {
     );
   }
 
-  /// Sign this event with the given private key
+  /// Sign this event with the given private key.
+  /// 
+  /// Creates a new [NostrEvent] instance with a valid signature. The signature
+  /// is generated using the Schnorr signature algorithm over the event ID.
+  /// 
+  /// Parameters:
+  /// - [privateKey]: The private key corresponding to the event's pubkey (32-byte hex)
+  /// 
+  /// Returns a new [NostrEvent] with the same data but with a valid signature.
+  /// 
+  /// Example:
+  /// ```dart
+  /// final unsignedEvent = NostrEvent.create(
+  ///   pubkey: myPubkey,
+  ///   kind: 1,
+  ///   content: 'Hello!',
+  ///   tags: [],
+  /// );
+  /// 
+  /// final signedEvent = unsignedEvent.sign(myPrivateKey);
+  /// print(signedEvent.isValid); // true
+  /// ```
   NostrEvent sign(String privateKey) {
     final signature = NostrCrypto.signEvent(this, privateKey);
     return NostrEvent(
@@ -82,7 +252,25 @@ class NostrEvent extends Equatable {
     );
   }
 
-  /// Verify the signature of this event
+  /// Verify that this event has a valid ID and signature.
+  /// 
+  /// Performs two checks:
+  /// 1. Verifies that the event ID matches the hash of the event data
+  /// 2. Verifies that the signature is valid for the event ID and public key
+  /// 
+  /// Returns `true` if both checks pass, `false` otherwise.
+  /// 
+  /// This should be called before storing or relaying events to ensure
+  /// they haven't been tampered with.
+  /// 
+  /// Example:
+  /// ```dart
+  /// if (event.isValid) {
+  ///   await relay.publish(event);
+  /// } else {
+  ///   print('Invalid event - rejecting');
+  /// }
+  /// ```
   bool get isValid {
     // Verify ID matches content
     final eventData = [

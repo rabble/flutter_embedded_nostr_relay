@@ -11,6 +11,7 @@ A self-contained Nostr relay that runs inside Flutter apps, providing instant lo
 - 🔒 **Privacy-Preserving** - External relays don't see your viewing patterns
 - 💾 **Offline-First** - Works without internet, syncs when available
 - 🌐 **Cross-Platform** - iOS, Android, macOS, Windows, Linux, and Web
+- 🧅 **Optional Tor Support** - Route relay connections through Tor for enhanced privacy
 
 ## Quick Start
 
@@ -82,6 +83,38 @@ await relay.setRelayList(
 );
 ```
 
+#### Tor Support (Optional)
+
+To use Tor support, you must build your app with the Tor libraries:
+
+```bash
+# Build with Tor support enabled
+./scripts/build_with_tor.sh
+```
+
+Then use the Tor configuration in your app:
+
+```dart
+// Check if Tor support is available
+if (TorSupport.isAvailable) {
+  // Configure Tor for relay connections
+  final torConfig = TorConfig(
+    enabled: true,
+    forceTor: false,  // Don't require Tor for all connections
+    required: false,  // Allow fallback to clearnet
+    torOnlyRelays: ['wss://relay.onion'],  // Relays that require Tor
+  );
+  
+  await relay.updateTorConfig(torConfig);
+  
+  // Enable Tor for relay connections
+  await relay.setTorForRelays(true);
+  
+  // Enable Tor for video loading (optional)
+  await relay.setTorForVideos(true);
+}
+```
+
 ## Architecture
 
 The embedded relay acts as a smart proxy between your app and the Nostr network:
@@ -103,14 +136,16 @@ The embedded relay acts as a smart proxy between your app and the Nostr network:
 
 ## Platform Support
 
-| Platform | WebSocket Server | P2P Sync | BLE | WiFi Direct |
-|----------|-----------------|----------|-----|-------------|
-| iOS      | ✅              | ✅       | ✅  | ❌          |
-| Android  | ✅              | ✅       | ✅  | ✅          |
-| macOS    | ✅              | ✅       | ✅  | ❌          |
-| Windows  | ✅              | ❌       | ❌  | ❌          |
-| Linux    | ✅              | ❌       | ❌  | ❌          |
-| Web      | ❌              | ❌       | ❌  | ❌          |
+| Platform | WebSocket Server | P2P Sync | BLE | WiFi Direct | Tor Support |
+|----------|-----------------|----------|-----|-------------|-------------|
+| iOS      | ✅              | ✅       | ✅  | ❌          | ✅*         |
+| Android  | ✅              | ✅       | ✅  | ✅          | ✅*         |
+| macOS    | ✅              | ✅       | ✅  | ❌          | ✅*         |
+| Windows  | ✅              | ❌       | ❌  | ❌          | ✅*         |
+| Linux    | ✅              | ❌       | ❌  | ❌          | ✅*         |
+| Web      | ❌              | ❌       | ❌  | ❌          | ❌          |
+
+\* Tor support requires building with `./scripts/build_with_tor.sh`
 
 ## Performance
 
@@ -122,10 +157,11 @@ The embedded relay acts as a smart proxy between your app and the Nostr network:
 ## Documentation
 
 - [Architecture Overview](docs/architecture.md)
-- [API Reference](docs/api.md)
+- [API Overview](docs/api-overview.md)
 - [P2P Sync Protocol](docs/negentropy.md)
 - [Video Optimizations](docs/video.md)
-- [Examples](example/)
+- [Tor Integration](docs/tor.md)
+- [Quick Start Guide](docs/quick-start.md)
 
 ## Contributing
 

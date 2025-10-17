@@ -1,0 +1,10 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/libuncased-0943c37bd60b629c.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/owned.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/borrowed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/as_uncased.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/libuncased-0943c37bd60b629c.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/owned.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/borrowed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/as_uncased.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/uncased-0943c37bd60b629c.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/owned.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/borrowed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/as_uncased.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/owned.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/borrowed.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/as_uncased.rs:

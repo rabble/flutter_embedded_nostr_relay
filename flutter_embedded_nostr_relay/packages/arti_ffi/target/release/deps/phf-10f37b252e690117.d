@@ -1,0 +1,11 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libphf-10f37b252e690117.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/map.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/ordered_map.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/ordered_set.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/set.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libphf-10f37b252e690117.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/map.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/ordered_map.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/ordered_set.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/set.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/phf-10f37b252e690117.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/map.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/ordered_map.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/ordered_set.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/set.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/map.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/ordered_map.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/ordered_set.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/phf-0.12.1/src/set.rs:

@@ -1,0 +1,10 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libuncased-909f8f25023b6c00.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/owned.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/borrowed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/as_uncased.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libuncased-909f8f25023b6c00.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/owned.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/borrowed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/as_uncased.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/uncased-909f8f25023b6c00.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/owned.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/borrowed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/as_uncased.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/owned.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/borrowed.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/uncased-0.9.10/src/as_uncased.rs:

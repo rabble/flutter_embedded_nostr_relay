@@ -1,0 +1,6 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
+#include "ephemeral/Flutter-Generated.xcconfig"
+
+// Arti FFI library configuration
+LIBRARY_SEARCH_PATHS = $(inherited) $(SRCROOT)/Runner/Libraries
+OTHER_LDFLAGS = $(inherited) -larti_ffi

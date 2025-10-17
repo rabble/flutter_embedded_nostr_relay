@@ -1,0 +1,90 @@
+# ABOUTME: Example Flutter app showcasing embedded Nostr relay features
+# ABOUTME: Demonstrates timeline, profiles, messaging, and P2P sync capabilities
+
+name: nostr_social_example
+description: "Comprehensive Flutter example app showcasing all features of the embedded Nostr relay library"
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Local dependency on the embedded relay library
+  flutter_embedded_nostr_relay:
+    path: ../
+
+  # State management
+  provider: ^6.1.2
+
+  # UI and theming
+  material_color_utilities: ^0.11.1
+  dynamic_color: ^1.7.0
+
+  # Crypto and key management
+  crypto: ^3.0.5
+  convert: ^3.1.2
+  bip39: ^1.0.6
+  hex: ^0.2.0
+
+  # Storage and preferences
+  shared_preferences: ^2.3.4
+  path_provider: ^2.1.5
+
+  # Utilities
+  intl: ^0.19.0
+  timeago: ^3.7.0
+  uuid: ^4.5.1
+  collection: ^1.19.0
+
+  # Image handling
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
+
+  # QR codes for key sharing
+  qr_flutter: ^4.1.0
+  qr_code_scanner: ^1.0.1
+
+  # Connectivity
+  connectivity_plus: ^6.0.5
+
+  # Logging
+  logging: ^1.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  
+  # Testing framework and mocking
+  mockito: ^5.4.4
+  build_runner: ^2.4.13
+  
+  # Test coverage
+  test: ^1.25.8
+  
+  # Integration testing
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icons/
+    - assets/images/
+
+  # Material Design 3 fonts (comment out for now - use system fonts)
+  # fonts:
+  #   - family: Roboto
+  #     fonts:
+  #       - asset: packages/flutter/fonts/Roboto-Regular.ttf
+  #       - asset: packages/flutter/fonts/Roboto-Medium.ttf
+  #         weight: 500
+  #       - asset: packages/flutter/fonts/Roboto-Bold.ttf
+  #         weight: 700

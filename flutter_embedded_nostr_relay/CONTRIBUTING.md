@@ -59,6 +59,25 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
    flutter run
    ```
 
+### Building with Tor Support
+
+If you're contributing to Tor-related features:
+
+1. **Install Rust** (required for building Arti)
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
+
+2. **Build with Tor libraries**
+   ```bash
+   ./scripts/build_with_tor.sh
+   ```
+
+3. **Test with Tor enabled**
+   ```bash
+   flutter test --dart-define=TOR_ENABLED=true
+   ```
+
 ## Code Style
 
 - Follow the [Effective Dart](https://dart.dev/guides/language/effective-dart) guidelines
@@ -71,6 +90,38 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 - Ensure all tests pass before submitting PR
 - Aim for high code coverage
 - Include unit tests, integration tests, and e2e tests where appropriate
+
+### Test-Driven Development (TDD)
+
+We follow TDD practices, especially for new features:
+
+1. **Write failing tests first**
+2. **Implement minimum code to pass**
+3. **Refactor while keeping tests green**
+
+Example:
+```dart
+// 1. Write failing test
+test('should enable Tor for relay connections', () async {
+  final relay = MockEmbeddedNostrRelay();
+  final provider = RelayProvider(relay);
+  
+  await provider.setTorForRelays(true);
+  
+  expect(provider.torForRelays, isTrue);
+  verify(relay.setTorForRelays(true)).called(1);
+});
+
+// 2. Implement feature
+// 3. Refactor
+```
+
+### Tor-Specific Testing
+
+When testing Tor features:
+- Use conditional imports to separate Tor/non-Tor code paths
+- Mock Tor library availability in tests
+- Test graceful degradation when Tor is unavailable
 
 ## License
 By contributing, you agree that your contributions will be licensed under its MIT License.

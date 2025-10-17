@@ -1,13 +1,18 @@
 // ABOUTME: SQLite database helper for event storage and indexing
 // ABOUTME: Creates and manages database schema with optimized indexes
 
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../core/constants.dart';
 import '../utils/logger.dart';
+import '../utils/platform_utils.dart';
+import '../utils/file_utils.dart';
+
+// Conditional import for path_provider and Directory - stub on Web, real on non-Web
+import 'database_helper_stub.dart'
+    if (dart.library.io) 'database_helper_io.dart';
 
 class DatabaseHelper {
   static Database? _database;
@@ -36,30 +41,92 @@ class DatabaseHelper {
   }
   
   Future<Database> _initDatabase() async {
-    // Initialize FFI for desktop platforms or test mode
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS || _testMode) {
+    // Determine which database factory to use WITHOUT polluting global state
+    DatabaseFactory factory;
+
+    if (PlatformUtils.isDesktop || _testMode) {
+      // Use FFI for desktop, but DON'T set global factory
       sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-    }
-    
-    late String path;
-    if (_testMode) {
-      // Use in-memory database for tests
-      path = inMemoryDatabasePath;
-      RelayLogger.db('init', 'Opening in-memory database for tests');
+      factory = databaseFactoryFfi;
+    } else if (PlatformUtils.isWeb) {
+      // Use FFI for web
+      sqfliteFfiInit();
+      factory = databaseFactoryFfi;
     } else {
-      final documentsDirectory = await getApplicationDocumentsDirectory();
-      path = join(documentsDirectory.path, RelayConstants.databaseName);
-      RelayLogger.db('init', 'Opening database at $path');
+      // Use default factory for iOS/Android
+      factory = databaseFactory;
     }
-    
-    return await openDatabase(
-      path,
-      version: RelayConstants.databaseVersion,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-      onOpen: _onOpen,
-    );
+
+    late String path;
+    if (PlatformUtils.isWeb) {
+      // Use in-memory database for Web platform (including tests)
+      // Web doesn't support path_provider or file system access
+      path = inMemoryDatabasePath;
+      RelayLogger.db('init', 'Opening in-memory database for Web platform');
+      if (_testMode) {
+        RelayLogger.db('init', 'Test mode enabled - using in-memory database on Web');
+      } else {
+        RelayLogger.db('init', 'Note: Events will not persist across page reloads on Web');
+      }
+    } else if (_testMode) {
+      // Use file-based database in /tmp for tests on non-web platforms
+      // This enables WAL mode for concurrent reads/writes, matching production behavior
+      final testDir = Directory('/tmp/flutter_test');
+      if (!testDir.existsSync()) {
+        testDir.createSync(recursive: true);
+      }
+      path = '${testDir.path}/nostr_relay_test.db';
+      RelayLogger.db('init', 'Opening test database at $path (WAL mode enabled)');
+    } else {
+      final supportDirectory = await getApplicationSupportDirectory();
+
+      // Use Application Support directory for database storage
+      // This is the correct location for app data on all platforms
+      // On macOS: ~/Library/Application Support/com.example.app/
+      // On iOS: sandboxed app support directory
+      // On Android: sandboxed app support directory
+      path = join(supportDirectory.path, RelayConstants.databaseName);
+
+      RelayLogger.db('init', 'Opening persistent database at $path');
+      RelayLogger.db('init', 'Platform: ${PlatformUtils.operatingSystem}');
+    }
+
+    try {
+      return await factory.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: RelayConstants.databaseVersion,
+          onCreate: _onCreate,
+          onUpgrade: _onUpgrade,
+          onOpen: _onOpen,
+        ),
+      );
+    } catch (e) {
+      RelayLogger.error('Failed to open database', e);
+      
+      // On iOS, sometimes the database can be corrupted or have permission issues
+      // Try to delete and recreate if this is not a test
+      if (!_testMode && PlatformUtils.isIOS) {
+        try {
+          RelayLogger.db('init', 'Attempting to delete and recreate database on iOS');
+          await databaseFactory.deleteDatabase(path);
+          
+          // Try again with a fresh database
+          return await openDatabase(
+            path,
+            version: RelayConstants.databaseVersion,
+            onCreate: _onCreate,
+            onUpgrade: _onUpgrade,
+            onOpen: _onOpen,
+          );
+        } catch (retryError) {
+          RelayLogger.error('Failed to recreate database', retryError);
+          rethrow;
+        }
+      }
+      
+      rethrow;
+    }
   }
   
   Future<void> _onCreate(Database db, int version) async {
@@ -158,12 +225,32 @@ class DatabaseHelper {
     await db.execute('PRAGMA foreign_keys = ON;');
     
     // Optimize for performance
-    await db.execute('PRAGMA journal_mode = WAL;');
-    await db.execute('PRAGMA synchronous = NORMAL;');
-    await db.execute('PRAGMA cache_size = -64000;'); // 64MB cache
-    await db.execute('PRAGMA temp_store = MEMORY;');
+    // On iOS, WAL mode can fail in certain sandboxed environments
+    // We need to handle this gracefully and fall back to default journal mode
+    try {
+      await db.execute('PRAGMA journal_mode = WAL;');
+    } catch (e) {
+      RelayLogger.db('open', 'Failed to set WAL mode (iOS compatibility): $e');
+      // Fall back to DELETE mode which is more compatible
+      try {
+        await db.execute('PRAGMA journal_mode = DELETE;');
+      } catch (_) {
+        // Even DELETE mode might fail, just continue with default
+        RelayLogger.db('open', 'Using default journal mode');
+      }
+    }
     
-    RelayLogger.db('open', 'Database opened with performance optimizations');
+    // These pragmas are generally safe across platforms
+    try {
+      await db.execute('PRAGMA synchronous = NORMAL;');
+      await db.execute('PRAGMA cache_size = -64000;'); // 64MB cache
+      await db.execute('PRAGMA temp_store = MEMORY;');
+    } catch (e) {
+      RelayLogger.db('open', 'Some performance optimizations failed: $e');
+      // Continue anyway, these are optimizations not requirements
+    }
+    
+    RelayLogger.db('open', 'Database opened with available optimizations');
   }
   
   /// Run VACUUM to optimize database
@@ -195,13 +282,13 @@ class DatabaseHelper {
   }
   
   Future<int> _getDatabaseSize() async {
+    // On web, we can't check file sizes
+    if (kIsWeb) return 0;
+
     try {
-      final documentsDirectory = await getApplicationDocumentsDirectory();
-      final path = join(documentsDirectory.path, RelayConstants.databaseName);
-      final file = File(path);
-      if (await file.exists()) {
-        return await file.length();
-      }
+      final supportDirectory = await getApplicationSupportDirectory();
+      final path = join(supportDirectory.path, RelayConstants.databaseName);
+      return await FileUtils.getFileSize(path);
     } catch (e) {
       RelayLogger.error('Failed to get database size', e);
     }
@@ -220,8 +307,15 @@ class DatabaseHelper {
   /// Delete the database (for testing or reset)
   Future<void> deleteDatabase() async {
     await close();
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final path = join(documentsDirectory.path, RelayConstants.databaseName);
+
+    // On web, we can't delete files
+    if (kIsWeb) {
+      RelayLogger.db('delete', 'Database deleted (in-memory on Web)');
+      return;
+    }
+
+    final supportDirectory = await getApplicationSupportDirectory();
+    final path = join(supportDirectory.path, RelayConstants.databaseName);
     await databaseFactory.deleteDatabase(path);
     RelayLogger.db('delete', 'Database deleted');
   }

@@ -1,0 +1,10 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libtor_checkable-33bc06e1cbd49c98.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/signed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/timed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/../README.md
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/libtor_checkable-33bc06e1cbd49c98.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/signed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/timed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/../README.md
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/deps/tor_checkable-33bc06e1cbd49c98.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/signed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/timed.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/../README.md
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/signed.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/timed.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tor-checkable-0.32.0/src/../README.md:

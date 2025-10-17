@@ -1,0 +1,11 @@
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/liblibsqlite3_sys-ef2c9b6842e47fe1.rmeta: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.34.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.34.0/src/error.rs /Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/build/libsqlite3-sys-71dbb3d50b193de1/out/bindgen.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/liblibsqlite3_sys-ef2c9b6842e47fe1.rlib: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.34.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.34.0/src/error.rs /Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/build/libsqlite3-sys-71dbb3d50b193de1/out/bindgen.rs
+
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/deps/libsqlite3_sys-ef2c9b6842e47fe1.d: /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.34.0/src/lib.rs /Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.34.0/src/error.rs /Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/build/libsqlite3-sys-71dbb3d50b193de1/out/bindgen.rs
+
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.34.0/src/lib.rs:
+/Users/rabble/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/libsqlite3-sys-0.34.0/src/error.rs:
+/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/build/libsqlite3-sys-71dbb3d50b193de1/out/bindgen.rs:
+
+# env-dep:OUT_DIR=/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/x86_64-apple-darwin/release/build/libsqlite3-sys-71dbb3d50b193de1/out
