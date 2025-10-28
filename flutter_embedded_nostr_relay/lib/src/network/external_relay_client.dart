@@ -207,7 +207,7 @@ class ExternalRelayClient {
     try {
       final filterMaps = filters.map((f) => f.toJson()).toList();
       final message = json.encode(['REQ', subscriptionId, ...filterMaps]);
-      
+
       // Log the REQ message being sent
       RelayLogger.info('[RELAY-CLIENT->$url] Sending REQ: subscription=$subscriptionId');
       for (var i = 0; i < filterMaps.length; i++) {
@@ -219,6 +219,16 @@ class ExternalRelayClient {
             RelayLogger.info('[RELAY-CLIENT->$url] Requesting event: ${ids.first}');
           }
         }
+        // Log hashtag filters
+        if (filter['#t'] != null) {
+          RelayLogger.info('[RELAY-CLIENT->$url] Filter $i has hashtag filter: ${filter['#t']}');
+        }
+        // Log all tag filters
+        filter.forEach((key, value) {
+          if (key.startsWith('#')) {
+            RelayLogger.info('[RELAY-CLIENT->$url] Filter $i has tag filter $key: $value');
+          }
+        });
       }
       RelayLogger.debug('[RELAY-CLIENT->$url] Full REQ message: $message');
       
