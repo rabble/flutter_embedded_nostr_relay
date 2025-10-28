@@ -1,8 +1,11 @@
 // ABOUTME: Tor support feature detection and platform-specific library path resolution
 // ABOUTME: Provides runtime detection of Tor libraries with graceful fallback when not present
 
-import 'dart:ffi';
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html';
+
+// Conditional imports for FFI (not available on web)
+import 'tor_support_stub.dart' 
+  if (dart.library.io) 'tor_support_io.dart';
 
 /// Static utility class for detecting Tor library availability at runtime
 class TorSupport {
@@ -10,44 +13,11 @@ class TorSupport {
   static bool _available = false;
   
   /// Check if Tor libraries are available on this platform
-  static bool get isAvailable {
-    if (!_checked) {
-      _checked = true;
-      try {
-        // Try to load the Tor library
-        final lib = DynamicLibrary.open(libraryPath);
-        // Look for a known Arti function to verify it's the right library
-        _available = lib.lookup('arti_client_create') != null;
-      } catch (_) {
-        // Library not found or doesn't have expected symbols
-        _available = false;
-      }
-    }
-    return _available;
-  }
+  static bool get isAvailable => TorSupportImpl.isAvailable;
   
   /// Get the platform-specific library path for Tor/Arti
-  static String get libraryPath {
-    if (Platform.isAndroid) return 'libarti_ffi.so';
-    if (Platform.isIOS) return 'ArtiFFI.framework/ArtiFFI';
-    if (Platform.isMacOS) {
-      // For development/debug, try the absolute path first
-      final absolutePath = '/Users/rabble/code/vine_fun/flutter_embedded_nostr_relay/flutter_embedded_nostr_relay/packages/arti_ffi/target/release/libarti_ffi.dylib';
-      final file = File(absolutePath);
-      if (file.existsSync()) {
-        return absolutePath;
-      }
-      // Fall back to relative path for production builds
-      return 'libarti_ffi.dylib';
-    }
-    if (Platform.isWindows) return 'arti_ffi.dll';
-    if (Platform.isLinux) return 'libarti_ffi.so';
-    throw UnsupportedError('Platform ${Platform.operatingSystem} not supported for Tor');
-  }
+  static String get libraryPath => TorSupportImpl.libraryPath;
   
   /// Reset the availability check (useful for testing)
-  static void resetCheck() {
-    _checked = false;
-    _available = false;
-  }
+  static void resetCheck() => TorSupportImpl.resetCheck();
 }

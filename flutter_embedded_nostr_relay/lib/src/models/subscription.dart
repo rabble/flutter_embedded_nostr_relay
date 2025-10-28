@@ -150,7 +150,22 @@ class Subscription extends Equatable {
   /// The event will only be delivered if it matches at least one of the
   /// subscription's filters.
   void processEvent(NostrEvent event) {
-    if (matchesEvent(event)) {
+    final matches = matchesEvent(event);
+    if (!matches) {
+      // Debug logging for hashtag filters
+      final hasHashtagFilter = filters.any((f) => f.tags != null && f.tags!.containsKey('#t'));
+      if (hasHashtagFilter) {
+        final eventJson = event.toJson();
+        print('[SUBSCRIPTION DEBUG] Event ${event.id.substring(0, 8)} did NOT match filter');
+        print('[SUBSCRIPTION DEBUG]   Event tags: ${eventJson['tags']}');
+        for (final filter in filters) {
+          if (filter.tags != null && filter.tags!.containsKey('#t')) {
+            print('[SUBSCRIPTION DEBUG]   Filter #t: ${filter.tags!['#t']}');
+          }
+        }
+      }
+    }
+    if (matches) {
       _eventController.add(event);
       onEvent?.call(event);
     }

@@ -2,7 +2,7 @@
 // ABOUTME: Coordinates storage, networking, subscriptions and P2P sync
 
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import '../models/nostr_event.dart';
@@ -11,11 +11,14 @@ import '../models/subscription.dart';
 import '../models/relay_info.dart';
 import '../models/relay_message.dart';
 import '../storage/event_store.dart';
+import '../storage/event_write_queue.dart';
 import '../storage/database_helper.dart';
 import '../network/external_relay_client.dart';
 import '../utils/logger.dart';
+import '../utils/platform_utils.dart';
 import 'constants.dart';
 import 'subscription_manager.dart';
+import 'function_channel_relay.dart';
 
 /// Transport protocols available for P2P synchronization.
 /// 
@@ -140,13 +143,23 @@ class EmbeddedNostrRelay {
   final EventStore _eventStore = EventStore();
   final SubscriptionManager _subscriptionManager = SubscriptionManager();
   final Map<String, Subscription> _internalSubscriptions = {}; // For legacy API
-  final StreamController<NostrEvent> _eventStreamController = 
+  final StreamController<NostrEvent> _eventStreamController =
       StreamController<NostrEvent>.broadcast();
   final Map<String, ExternalRelayClient> _externalRelays = {};
   final Map<String, Map<String, bool>> _relaySubscriptions = {}; // relay -> subId -> active
-  
+
+  // Write queue for batching external events to prevent database lock contention
+  late final EventWriteQueue _writeQueue;
+
   bool _initialized = false;
+  bool _isShuttingDown = false;
   Timer? _gcTimer;
+
+  // Function channel interface (replaces WebSocket server)
+  FunctionChannelRelay? _functionChannel;
+  
+  /// Check if the relay is initialized
+  bool get isInitialized => _initialized;
   
   /// Stream of all events processed by the relay.
   /// 
@@ -163,45 +176,83 @@ class EmbeddedNostrRelay {
   Stream<NostrEvent> get eventStream => _eventStreamController.stream;
   
   /// Initialize the embedded relay.
-  /// 
+  ///
   /// This must be called before using any other relay functionality. It sets up
   /// the database, logging, and optional garbage collection timer.
-  /// 
+  ///
   /// Parameters:
   /// - [logLevel]: Controls logging verbosity (default: Level.INFO)
   /// - [enableGarbageCollection]: Whether to automatically clean up old events (default: true)
-  /// 
+  /// - [useFunctionChannel]: Use direct function calls instead of WebSocket (default: true)
+  ///
   /// Throws [StateError] if called multiple times without [shutdown] in between.
-  /// 
+  ///
   /// Example:
   /// ```dart
   /// await relay.initialize(
   ///   logLevel: Level.WARNING, // Reduce log noise
   ///   enableGarbageCollection: false, // Keep all events
+  ///   useFunctionChannel: true, // Use direct function calls
   /// );
   /// ```
   Future<void> initialize({
     Level logLevel = Level.INFO,
     bool enableGarbageCollection = true,
+    bool useFunctionChannel = true,
   }) async {
     if (_initialized) return;
-    
+
+    // Reset shutdown flag to allow reinitialization
+    _isShuttingDown = false;
+
     // Initialize logger
     RelayLogger.init(level: logLevel);
     RelayLogger.info('Initializing Flutter Embedded Nostr Relay');
-    
-    // Initialize database
-    final db = await DatabaseHelper.instance.database;
-    RelayLogger.info('Database initialized');
-    
-    // Start garbage collection timer
-    if (enableGarbageCollection) {
-      _gcTimer = Timer.periodic(
-        RelayConstants.vacuumInterval,
-        (_) => _runGarbageCollection(),
-      );
+
+    try {
+      // Initialize database with better error handling
+      RelayLogger.info('Attempting database initialization...');
+      final db = await DatabaseHelper.instance.database;
+      RelayLogger.info('Database initialized successfully');
+
+      // Initialize write queue for batching external events
+      _writeQueue = EventWriteQueue(_eventStore);
+      RelayLogger.info('Write queue initialized for batched event writes');
+
+      // Start garbage collection timer
+      if (enableGarbageCollection) {
+        _gcTimer = Timer.periodic(
+          RelayConstants.vacuumInterval,
+          (_) => _runGarbageCollection(),
+        );
+      }
+
+      // Initialize function channel if requested
+      if (useFunctionChannel) {
+        _functionChannel = FunctionChannelRelay(
+          subscriptionManager: _subscriptionManager,
+          eventStore: _eventStore,
+          embeddedRelay: this,
+        );
+        RelayLogger.info('Function channel relay initialized (direct calls, no WebSocket)');
+      }
+    } catch (e, stackTrace) {
+      RelayLogger.error('Database initialization failed', e);
+      RelayLogger.error('Stack trace', stackTrace);
+
+      // On iOS, this might be a permissions or sandbox issue
+      if (PlatformUtils.isIOS) {
+        RelayLogger.warning('iOS database initialization failed - this may be a sandbox or permissions issue');
+        RelayLogger.warning('Attempting to continue with limited functionality');
+
+        // Don't rethrow on iOS to allow the app to continue
+        // The app can retry initialization later
+      } else {
+        // On other platforms, rethrow the error
+        rethrow;
+      }
     }
-    
+
     _initialized = true;
     RelayLogger.info('Embedded relay initialized successfully');
   }
@@ -400,32 +451,41 @@ class EmbeddedNostrRelay {
     if (!_initialized) {
       throw StateError('Relay not initialized. Call initialize() first.');
     }
-    
+
+
     // Validate event
     if (!event.isValid) {
       RelayLogger.warning('Rejecting invalid event: ${event.id}');
       return false;
     }
-    
+
     // Store event
     final stored = await _eventStore.storeEvent(event);
-    
+
     if (stored) {
+      // Check if relay is shutting down
+      if (_isShuttingDown) {
+        RelayLogger.info('Relay is shutting down, skipping event routing for ${event.id}');
+        return false;
+      }
+
       // Notify legacy internal subscriptions
       _notifyInternalSubscriptions(event);
-      
+
       // Route event through subscription manager
       await _subscriptionManager.routeEvent(event);
-      
-      // Emit to global stream
-      _eventStreamController.add(event);
-      
+
+      // Emit to global stream (only if not shutting down and stream not closed)
+      if (!_eventStreamController.isClosed) {
+        _eventStreamController.add(event);
+      }
+
       // Publish to external relays
       await _publishToExternalRelays(event);
-      
+
       RelayLogger.event('published', event.id);
     }
-    
+
     return stored;
   }
   
@@ -482,11 +542,54 @@ class EmbeddedNostrRelay {
     if (!_initialized) {
       throw StateError('Relay not initialized. Call initialize() first.');
     }
-    
+
     final managerStats = _subscriptionManager.getStatistics();
     managerStats['internalSubscriptions'] = _internalSubscriptions.length;
     return managerStats;
   }
+
+  /// Create a function channel session for direct API access.
+  ///
+  /// This replaces WebSocket connections with direct function calls,
+  /// eliminating network overhead and local network permissions.
+  ///
+  /// Returns a [FunctionChannelSession] that can be used to:
+  /// - Send REQ, CLOSE, and EVENT messages
+  /// - Receive events via stream or callbacks
+  ///
+  /// Example:
+  /// ```dart
+  /// final session = relay.createFunctionSession();
+  ///
+  /// // Listen for events
+  /// session.responseStream.listen((response) {
+  ///   if (response is EventResponse) {
+  ///     print('Received event: ${response.event.content}');
+  ///   }
+  /// });
+  ///
+  /// // Send a subscription request
+  /// await session.sendMessage(ReqMessage(
+  ///   subscriptionId: 'sub1',
+  ///   filters: [Filter(kinds: [1])],
+  /// ));
+  /// ```
+  FunctionChannelSession createFunctionSession() {
+    if (!_initialized) {
+      throw StateError('Relay not initialized. Call initialize() first.');
+    }
+
+    if (_functionChannel == null) {
+      throw StateError('Function channel not initialized. Call initialize(useFunctionChannel: true) first.');
+    }
+
+    return _functionChannel!.createSession();
+  }
+
+  /// Get the function channel relay instance (if initialized).
+  ///
+  /// Returns null if the relay was initialized without function channel support.
+  FunctionChannelRelay? get functionChannel => _functionChannel;
   
   /// Enable P2P synchronization
   Future<void> enableP2PSync({
@@ -510,7 +613,7 @@ class EmbeddedNostrRelay {
     }
     
     if (transports.contains(TransportType.wifiDirect)) {
-      if (Platform.isAndroid) {
+      if (PlatformUtils.isAndroid) {
         // TODO: Initialize WiFi Direct transport
         RelayLogger.info('WiFi Direct transport enabled');
       } else {
@@ -616,18 +719,26 @@ class EmbeddedNostrRelay {
       }
     }
     
-    // Store event locally
-    _eventStore.storeEvent(event).then((stored) {
+    // Store event locally via write queue (batching prevents database lock contention)
+    _writeQueue.enqueue(event).then((stored) {
       if (stored) {
         RelayLogger.info('[EXTERNAL-EVENT] Successfully stored event ${event.id} in local database');
-        
+
+        // Check if relay is shutting down before routing events
+        if (_isShuttingDown) {
+          RelayLogger.info('[EXTERNAL-EVENT] Relay is shutting down, skipping event routing for ${event.id}');
+          return;
+        }
+
         // Route to local subscriptions (including legacy internal subscriptions)
         _notifyInternalSubscriptions(event);
         _subscriptionManager.routeEvent(event);
-        
-        // Emit on event stream
-        _eventStreamController.add(event);
-        
+
+        // Emit on event stream (only if not shutting down)
+        if (!_eventStreamController.isClosed) {
+          _eventStreamController.add(event);
+        }
+
         RelayLogger.info('[EXTERNAL-EVENT] Routed event ${event.id} to subscriptions');
       } else {
         RelayLogger.info('[EXTERNAL-EVENT] Event ${event.id} already exists in database or was rejected');
@@ -736,30 +847,39 @@ class EmbeddedNostrRelay {
   /// Shutdown the relay
   Future<void> shutdown() async {
     RelayLogger.info('Shutting down embedded relay');
-    
+
+    // Set shutdown flag FIRST to prevent new events from being added to streams
+    _isShuttingDown = true;
+
     // Cancel timers
     _gcTimer?.cancel();
-    
-    // Disconnect from external relays
+
+    // Disconnect from external relays (stops new events from arriving)
     for (final relay in _externalRelays.values) {
       await relay.disconnect();
     }
     _externalRelays.clear();
     _relaySubscriptions.clear();
-    
+
+    // CRITICAL: Drain write queue before closing database
+    // This ensures all pending events are written and prevents "Cannot add events after close" errors
+    RelayLogger.info('Draining write queue before shutdown...');
+    await _writeQueue.drain();
+    RelayLogger.info('Write queue drained successfully');
+
     // Close subscription manager
     await _subscriptionManager.close();
-    
+
     // Close internal subscriptions
     for (final subscription in _internalSubscriptions.values) {
       await subscription.close();
     }
     _internalSubscriptions.clear();
-    
+
     // Close streams
     await _eventStreamController.close();
-    
-    // Close database
+
+    // Close database (safe now that write queue is drained)
     await DatabaseHelper.instance.close();
     
     _initialized = false;

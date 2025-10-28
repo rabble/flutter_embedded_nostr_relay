@@ -281,21 +281,24 @@ class NostrEvent extends Equatable {
       tags,
       content,
     ];
-    
+
     final serialized = json.encode(eventData);
     final calculatedId = NostrCrypto.sha256(serialized);
-    
+
     if (calculatedId != id) {
       return false;
     }
-    
+
     // Verify signature
     return NostrCrypto.verifySignature(id, pubkey, sig);
   }
 
   /// Check if this is a replaceable event
   bool get isReplaceable {
-    return (kind >= 10000 && kind < 20000) || 
+    // Kind 0 (metadata), 3 (contact list) are replaceable
+    // Also kinds 10000-19999 and 30000-39999
+    return kind == 0 || kind == 3 ||
+           (kind >= 10000 && kind < 20000) ||
            (kind >= 30000 && kind < 40000);
   }
 

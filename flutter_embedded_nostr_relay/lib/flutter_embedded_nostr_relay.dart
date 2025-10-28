@@ -7,6 +7,7 @@ library flutter_embedded_nostr_relay;
 export 'src/core/embedded_nostr_relay.dart';
 export 'src/core/subscription_manager.dart';
 export 'src/core/constants.dart';
+export 'src/core/function_channel_relay.dart';
 
 // Model exports
 export 'src/models/nostr_event.dart';

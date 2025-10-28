@@ -3,10 +3,9 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;
+import 'websocket_channel_factory.dart';
 import '../models/nostr_event.dart';
 import '../models/filter.dart';
 import '../models/relay_message.dart';
@@ -43,7 +42,8 @@ class ExternalRelayClient {
           throw Exception('Invalid WebSocket URL scheme: ${uri.scheme}');
         }
         
-        _channel = IOWebSocketChannel.connect(uri);
+        // Use platform-appropriate WebSocket implementation
+        _channel = WebSocketChannelFactory.connect(uri);
         
         // Listen for messages with error handling
         _subscription = _channel!.stream

@@ -143,10 +143,11 @@ class EventStore {
           whereArgs: [event.id],
           limit: 1,
         );
-        
+
         if (existing.isNotEmpty) {
           RelayLogger.event('duplicate', event.id);
-          return false;
+          // Duplicate is not an error - it's normal to republish events
+          return true;
         }
         
         // Handle replaceable events
@@ -246,7 +247,8 @@ class EventStore {
       );
       
       if (existing.isNotEmpty) {
-        return false;
+        // Duplicate is not an error - it's normal to republish events
+        return true;
       }
       
       // Handle replaceable events
@@ -285,7 +287,15 @@ class EventStore {
   }
   
   Future<void> _handleReplaceableEvent(Transaction txn, NostrEvent event) async {
-    if (event.kind >= 10000 && event.kind < 20000) {
+    if (event.kind == 0 || event.kind == 3) {
+      // Kind 0 (metadata) and Kind 3 (contact list) are replaceable
+      await txn.update(
+        'events',
+        {'deleted': 1},
+        where: 'kind = ? AND pubkey = ? AND created_at < ?',
+        whereArgs: [event.kind, event.pubkey, event.createdAt],
+      );
+    } else if (event.kind >= 10000 && event.kind < 20000) {
       // Regular replaceable event
       await txn.update(
         'events',
@@ -585,7 +595,22 @@ class EventStore {
       tagConditions.add('(t.tag_name = "d" AND t.tag_value IN (${List.filled(filter.dTags!.length, '?').join(',')}))');
       args.addAll(filter.dTags!);
     }
-    
+
+    // Handle generic tag filters (e.g., #t for hashtags, #r for references, etc.)
+    if (filter.tags != null && filter.tags!.isNotEmpty) {
+      for (final entry in filter.tags!.entries) {
+        // Remove the # prefix from the tag name for database lookup
+        final tagName = entry.key.startsWith('#') ? entry.key.substring(1) : entry.key;
+        final tagValues = entry.value;
+
+        if (tagValues.isNotEmpty) {
+          tagConditions.add('(t.tag_name = ? AND t.tag_value IN (${List.filled(tagValues.length, '?').join(',')}))');
+          args.add(tagName);
+          args.addAll(tagValues);
+        }
+      }
+    }
+
     if (tagConditions.isNotEmpty) {
       conditions.add('(${tagConditions.join(' OR ')})');
     }
