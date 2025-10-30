@@ -17,12 +17,95 @@ A self-contained Nostr relay that runs inside Flutter apps, providing instant lo
 
 ### Installation
 
+#### Option 1: From pub.dev
+
 Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
   flutter_embedded_nostr_relay: ^0.1.0
 ```
+
+#### Option 2: Local Development with Symlink (for divine.video)
+
+**CRITICAL**: For divine.video (OpenVine) development, this package is a required local dependency that must be symlinked from its repository.
+
+##### Setup Instructions for divine.video
+
+1. **Clone this repository** (if not already present):
+   ```bash
+   cd ~/code/libraries  # or your preferred location
+   git clone https://github.com/OpenVine/flutter_embedded_nostr_relay.git
+   ```
+
+2. **Create the symlink** from your OpenVine project:
+   ```bash
+   # From the openvine project root directory
+   cd /path/to/your/openvine
+   ln -s /path/to/flutter_embedded_nostr_relay flutter_embedded_nostr_relay
+   ```
+
+   Example:
+   ```bash
+   cd ~/code/openvine
+   ln -s ~/code/libraries/flutter_embedded_nostr_relay flutter_embedded_nostr_relay
+   ```
+
+3. **Verify the symlink**:
+   ```bash
+   ls -la /path/to/your/openvine/flutter_embedded_nostr_relay
+   # Should show: flutter_embedded_nostr_relay -> /path/to/flutter_embedded_nostr_relay
+   ```
+
+4. **Configure your `mobile/pubspec.yaml`**:
+   ```yaml
+   dependencies:
+     flutter_embedded_nostr_relay:
+       path: ../flutter_embedded_nostr_relay/flutter_embedded_nostr_relay
+   ```
+
+5. **Run Flutter pub get**:
+   ```bash
+   cd mobile
+   flutter pub get
+   ```
+
+##### Usage in divine.video
+
+```dart
+// Import the embedded relay package
+import 'package:flutter_embedded_nostr_relay/flutter_embedded_nostr_relay.dart';
+
+// Initialize and configure the embedded relay
+final embeddedRelay = EmbeddedNostrRelay();
+await embeddedRelay.initialize();
+await embeddedRelay.addExternalRelay('wss://relay3.openvine.co');
+
+// Your NostrService should connect to the LOCAL relay
+// ws://localhost:7447 (NOT directly to external relays)
+```
+
+##### Architecture for divine.video
+
+- The embedded relay runs **inside** the Flutter app as a local WebSocket server on port 7447
+- NostrService connects to `ws://localhost:7447` (NOT directly to external relays)
+- The embedded relay manages all external relay connections
+- See `docs/NOSTR_RELAY_ARCHITECTURE.md` for complete architecture documentation
+
+##### Common Issues
+
+- **"Package not found"**: Symlink is missing or broken - verify with `ls -la` command above
+- **"Failed to connect to relay"**: Ensure WebSocket server is started and NostrService connects to localhost:7447
+- **"Bad state: Relay not initialized"**: Never use `nostr_sdk`'s `Relay` class for external connections - use `embeddedRelay.addExternalRelay()` instead
+
+##### Benefits of Symlinking
+
+- Edit library code directly while testing in divine.video
+- See changes immediately without package publishing
+- Easier to debug and iterate on features
+- Keep both projects in sync during development
+
+**Note:** For other projects or production deployments, use Option 1 (pub.dev) instead.
 
 ### Basic Usage
 
