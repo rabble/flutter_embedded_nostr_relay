@@ -1,0 +1,42 @@
+# Exclude Rust/Tor build artifacts (these are HUGE and contain test keys)
+packages/arti_ffi/target/
+
+# Exclude agent documentation (internal development only)
+agents/
+
+# Exclude development planning docs
+*.md
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!LICENSE
+
+# Exclude example assets that aren't needed
+example/assets/
+
+# Exclude build artifacts
+build/
+.dart_tool/
+
+# Exclude IDE files
+.idea/
+*.iml
+.vscode/
+
+# Exclude git
+.git/
+.gitignore
+
+# Exclude scripts
+scripts/
+
+# Exclude test utilities
+test/utils/
+
+# Keep the necessary files for the package
+!lib/**
+!example/lib/**
+!example/pubspec.yaml
+!example/analysis_options.yaml
+!test/**
+!doc/**

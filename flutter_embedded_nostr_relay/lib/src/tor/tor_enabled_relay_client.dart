@@ -9,9 +9,9 @@ class TorEnabledRelayClient extends ExternalRelayClient {
   final TorConfig torConfig;
   
   TorEnabledRelayClient({
-    required String url,
+    required super.url,
     required this.torConfig,
-  }) : super(url: url);
+  });
   
   // TODO: Override connect() to use Tor
   // TODO: Implement WebSocket over Tor

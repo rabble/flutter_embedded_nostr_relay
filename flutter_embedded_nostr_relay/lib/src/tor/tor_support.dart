@@ -9,8 +9,8 @@ import 'tor_support_stub.dart'
 
 /// Static utility class for detecting Tor library availability at runtime
 class TorSupport {
-  static bool _checked = false;
-  static bool _available = false;
+  static final bool _checked = false;
+  static final bool _available = false;
   
   /// Check if Tor libraries are available on this platform
   static bool get isAvailable => TorSupportImpl.isAvailable;

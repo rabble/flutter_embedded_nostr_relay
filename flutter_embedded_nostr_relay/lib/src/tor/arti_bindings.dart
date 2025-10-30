@@ -7,7 +7,7 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
 /// Opaque type for Arti client
-class ArtiTorClient extends Opaque {}
+final class ArtiTorClient extends Opaque {}
 
 /// FFI function signatures for Arti library
 typedef ArtiClientCreateNative = Pointer<ArtiTorClient> Function(

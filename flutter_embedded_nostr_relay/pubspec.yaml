@@ -5,6 +5,14 @@ repository: https://github.com/OpenVine/flutter_embedded_nostr_relay
 issue_tracker: https://github.com/OpenVine/flutter_embedded_nostr_relay/issues
 documentation: https://github.com/OpenVine/flutter_embedded_nostr_relay
 
+topics:
+  - nostr
+  - relay
+  - websocket
+  - p2p
+  - decentralized
+  - offline-first
+
 environment:
   sdk: ^3.8.1
   flutter: ">=3.0.0"

@@ -2,7 +2,6 @@
 // ABOUTME: Coordinates storage, networking, subscriptions and P2P sync
 
 import 'dart:async';
-import 'dart:io' if (dart.library.html) 'dart:html';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import '../models/nostr_event.dart';
@@ -212,7 +211,7 @@ class EmbeddedNostrRelay {
     try {
       // Initialize database with better error handling
       RelayLogger.info('Attempting database initialization...');
-      final db = await DatabaseHelper.instance.database;
+      await DatabaseHelper.instance.database;
       RelayLogger.info('Database initialized successfully');
 
       // Initialize write queue for batching external events
