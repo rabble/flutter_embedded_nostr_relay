@@ -204,10 +204,10 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_tags_value ON tags(tag_value);');
     
     // Compound indexes for common queries
-    await db.execute('CREATE INDEX idx_tags_e ON tags(tag_name, tag_value) WHERE tag_name = "e";');
-    await db.execute('CREATE INDEX idx_tags_p ON tags(tag_name, tag_value) WHERE tag_name = "p";');
-    await db.execute('CREATE INDEX idx_tags_a ON tags(tag_name, tag_value) WHERE tag_name = "a";');
-    await db.execute('CREATE INDEX idx_tags_d ON tags(tag_name, tag_value) WHERE tag_name = "d";');
+    await db.execute('CREATE INDEX idx_tags_e ON tags(tag_name, tag_value) WHERE tag_name = \'e\';');
+    await db.execute('CREATE INDEX idx_tags_p ON tags(tag_name, tag_value) WHERE tag_name = \'p\';');
+    await db.execute('CREATE INDEX idx_tags_a ON tags(tag_name, tag_value) WHERE tag_name = \'a\';');
+    await db.execute('CREATE INDEX idx_tags_d ON tags(tag_name, tag_value) WHERE tag_name = \'d\';');
   }
   
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
