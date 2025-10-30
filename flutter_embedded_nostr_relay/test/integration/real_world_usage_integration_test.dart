@@ -194,6 +194,38 @@ class NostrUser {
 }
 
 void main() {
+  // Helper functions for realistic content generation
+  String generateRealisticContent() {
+    final contents = [
+      'Just finished reading an interesting article about technology trends',
+      'Beautiful sunset today, perfect weather for a walk',
+      'Working on a new project, excited to share progress soon',
+      'Coffee shop vibes are perfect for getting work done',
+      'Weekend plans include hiking and catching up with friends',
+      'Learning something new every day keeps life interesting',
+      'Great discussion at today\'s meetup about decentralized systems',
+      'Book recommendation: just read something that changed my perspective',
+      'Cooking experiment turned out better than expected',
+      'Travel planning for the next adventure, any recommendations?',
+    ];
+
+    return contents[Random().nextInt(contents.length)];
+  }
+
+  String getRandomTag() {
+    final tags = [
+      'tech', 'lifestyle', 'books', 'travel', 'food', 'nature',
+      'programming', 'art', 'music', 'photography', 'fitness', 'gaming'
+    ];
+
+    return tags[Random().nextInt(tags.length)];
+  }
+
+  String getRandomReaction() {
+    final reactions = ['👍', '❤️', '🎉', '🔥', '💯', '🚀', '👏', '😊'];
+    return reactions[Random().nextInt(reactions.length)];
+  }
+
   group('Real-World Usage Pattern Integration Tests', () {
     late WebSocketServer server;
     late SubscriptionManager subscriptionManager;
@@ -929,8 +961,9 @@ void main() {
         
         // Simulate same user on different devices (same pubkey)
         final userPubkey = 'cross_platform_user' + '0' * (64 - 'cross_platform_user'.length);
-        mobileClient.pubkey = userPubkey;
-        // Note: In real implementation, desktopClient would have same pubkey
+        // Note: NostrUser.pubkey is final and set in constructor, so we can't change it
+        // In real implementation, both clients would be created with same pubkey
+        // For this test, we'll just use mobileClient's existing pubkey
         
         try {
           // Mobile client posts content
@@ -1029,21 +1062,21 @@ void main() {
             
             for (final user in activeUsers) {
               await user.publishTextNote(
-                'Round $round: ${_generateRealisticContent()}',
+                'Round $round: ${generateRealisticContent()}',
                 tags: [
-                  ['t', _getRandomTag()],
+                  ['t', getRandomTag()],
                   ['round', round.toString()]
                 ]
               );
               totalPosts++;
-              
+
               // Some users also react
               if (Random().nextBool() && user.publishedEvents.isNotEmpty) {
                 final targetUser = users[Random().nextInt(users.length)];
                 if (targetUser.publishedEvents.isNotEmpty) {
                   await user.publishReaction(
                     targetUser.publishedEvents.last.id,
-                    _getRandomReaction()
+                    getRandomReaction()
                   );
                 }
               }
@@ -1086,36 +1119,4 @@ void main() {
       });
     });
   });
-
-  // Helper functions for realistic content generation
-  String _generateRealisticContent() {
-    final contents = [
-      'Just finished reading an interesting article about technology trends',
-      'Beautiful sunset today, perfect weather for a walk',
-      'Working on a new project, excited to share progress soon',
-      'Coffee shop vibes are perfect for getting work done',
-      'Weekend plans include hiking and catching up with friends',
-      'Learning something new every day keeps life interesting',
-      'Great discussion at today\'s meetup about decentralized systems',
-      'Book recommendation: just read something that changed my perspective',
-      'Cooking experiment turned out better than expected',
-      'Travel planning for the next adventure, any recommendations?',
-    ];
-    
-    return contents[Random().nextInt(contents.length)];
-  }
-  
-  String _getRandomTag() {
-    final tags = [
-      'tech', 'lifestyle', 'books', 'travel', 'food', 'nature',
-      'programming', 'art', 'music', 'photography', 'fitness', 'gaming'
-    ];
-    
-    return tags[Random().nextInt(tags.length)];
-  }
-  
-  String _getRandomReaction() {
-    final reactions = ['👍', '❤️', '🎉', '🔥', '💯', '🚀', '👏', '😊'];
-    return reactions[Random().nextInt(reactions.length)];
-  }
 }

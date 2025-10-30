@@ -388,13 +388,13 @@ class EmbeddedNostrRelay {
     
     _internalSubscriptions[id] = subscription;
     RelayLogger.subscription('created', id, 'filters: ${filters.length}');
-    
+
     // Query existing events asynchronously
     _queryAndStreamEvents(subscription);
-    
+
     // Subscribe to external relays
     _subscribeToExternalRelays(id, filters);
-    
+
     return subscription;
   }
   
@@ -787,7 +787,7 @@ class EmbeddedNostrRelay {
   
   Future<void> _subscribeToExternalRelays(String subscriptionId, List<Filter> filters) async {
     RelayLogger.info('[EXTERNAL-SUB] Subscribing to ${_externalRelays.length} external relays - sub: $subscriptionId, filters: ${filters.length}');
-    
+
     // Log filter details for external relay subscription
     for (var i = 0; i < filters.length; i++) {
       final filter = filters[i];
@@ -798,16 +798,16 @@ class EmbeddedNostrRelay {
         }
       }
     }
-    
+
     if (_externalRelays.isEmpty) {
       RelayLogger.warning('[EXTERNAL-SUB] No external relays connected!');
       return;
     }
-    
+
     for (final entry in _externalRelays.entries) {
       final relayUrl = entry.key;
       final client = entry.value;
-      
+
       if (client.isConnected) {
         try {
           RelayLogger.info('[EXTERNAL-SUB] Sending REQ to $relayUrl with subscription ID: $subscriptionId');
@@ -895,7 +895,7 @@ class EmbeddedNostrRelay {
   Future<void> _queryAndStreamEvents(Subscription subscription) async {
     try {
       RelayLogger.info('[QUERY-LOCAL] Querying local database for subscription ${subscription.id}');
-      
+
       // Check if we're looking for specific event IDs
       bool hasSpecificIds = false;
       for (final filter in subscription.filters) {
@@ -904,26 +904,26 @@ class EmbeddedNostrRelay {
           RelayLogger.info('[QUERY-LOCAL] Filter requests ${filter.ids!.length} specific event IDs');
         }
       }
-      
+
       // Query existing events
       final events = await _eventStore.queryEvents(subscription.filters);
-      
+
       RelayLogger.info('[QUERY-LOCAL] Found ${events.length} events in local database');
-      
+
       // Send events to subscription
       for (final event in events) {
         subscription.processEvent(event);
       }
-      
+
       // Signal end of stored events
       subscription.signalEose();
-      
+
       // Log if we couldn't find requested events locally
       if (hasSpecificIds && events.isEmpty) {
         RelayLogger.warning('[QUERY-LOCAL] No events found locally for specific IDs - should be fetched from external relays');
       }
-      
-    } catch (e) {
+
+    } catch (e, stackTrace) {
       RelayLogger.error('[QUERY-LOCAL] Error querying events for subscription ${subscription.id}', e);
       subscription.handleError(e.toString());
     }
