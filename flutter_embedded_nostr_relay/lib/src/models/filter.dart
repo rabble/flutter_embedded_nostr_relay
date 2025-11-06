@@ -144,6 +144,11 @@ class Filter extends Equatable {
   @JsonKey(name: '#d')
   final List<String>? dTags;
 
+  /// Unknown/custom fields (e.g., divine extensions: sort, int#*, cursor)
+  /// Preserved for relay vendor extensions and future NIPs
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final Map<String, dynamic>? _unknownFields;
+
   const Filter({
     this.ids,
     this.authors,
@@ -156,33 +161,60 @@ class Filter extends Equatable {
     this.pTags,
     this.aTags,
     this.dTags,
-  });
+    Map<String, dynamic>? unknownFields,
+  }) : _unknownFields = unknownFields;
 
   factory Filter.fromJson(Map<String, dynamic> json) {
     // Handle custom tag filters
     final Map<String, dynamic> processedJson = Map.from(json);
     final Map<String, List<String>> tagFilters = {};
-    
-    // Extract all #<single-letter> tags
+    final Map<String, dynamic> unknownFields = {};
+
+    // Known NIP-01 filter fields
+    const knownFields = {
+      'ids', 'authors', 'kinds', 'tags', 'since', 'until', 'limit',
+      '#e', '#p', '#a', '#d', 'eTags', 'pTags', 'aTags', 'dTags',
+    };
+
+    // Extract all #<single-letter> tags and collect unknown fields
     json.forEach((key, value) {
       if (key.startsWith('#') && key.length == 2) {
         if (value is List) {
           tagFilters[key] = value.cast<String>();
           processedJson.remove(key);
         }
+      } else if (!knownFields.contains(key)) {
+        // Preserve unknown fields (divine extensions, future NIPs)
+        unknownFields[key] = value;
+        processedJson.remove(key);
       }
     });
-    
+
     if (tagFilters.isNotEmpty) {
       processedJson['tags'] = tagFilters;
     }
-    
-    return _$FilterFromJson(processedJson);
+
+    // Create filter with unknown fields preserved
+    final filter = _$FilterFromJson(processedJson);
+    return Filter(
+      ids: filter.ids,
+      authors: filter.authors,
+      kinds: filter.kinds,
+      tags: filter.tags,
+      since: filter.since,
+      until: filter.until,
+      limit: filter.limit,
+      eTags: filter.eTags,
+      pTags: filter.pTags,
+      aTags: filter.aTags,
+      dTags: filter.dTags,
+      unknownFields: unknownFields.isNotEmpty ? unknownFields : null,
+    );
   }
 
   Map<String, dynamic> toJson() {
     final json = _$FilterToJson(this);
-    
+
     // Add custom tag filters back to JSON
     if (tags != null) {
       tags!.forEach((key, value) {
@@ -190,7 +222,12 @@ class Filter extends Equatable {
       });
       json.remove('tags');
     }
-    
+
+    // Add unknown fields back (divine extensions, etc.)
+    if (_unknownFields != null) {
+      json.addAll(_unknownFields!);
+    }
+
     return json;
   }
 
@@ -303,6 +340,7 @@ class Filter extends Equatable {
     List<String>? pTags,
     List<String>? aTags,
     List<String>? dTags,
+    Map<String, dynamic>? unknownFields,
   }) {
     return Filter(
       ids: ids ?? this.ids,
@@ -316,6 +354,7 @@ class Filter extends Equatable {
       pTags: pTags ?? this.pTags,
       aTags: aTags ?? this.aTags,
       dTags: dTags ?? this.dTags,
+      unknownFields: unknownFields ?? this._unknownFields,
     );
   }
 
@@ -332,6 +371,7 @@ class Filter extends Equatable {
         pTags,
         aTags,
         dTags,
+        _unknownFields,
       ];
 
   @override

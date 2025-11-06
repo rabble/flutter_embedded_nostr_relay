@@ -5,7 +5,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:typed_data';
-import 'package:path_provider/path_provider.dart';
 import 'arti_bindings.dart';
 import 'tor_config.dart';
 import '../utils/logger.dart';

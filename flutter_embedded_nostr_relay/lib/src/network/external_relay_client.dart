@@ -8,7 +8,6 @@ import 'package:web_socket_channel/status.dart' as status;
 import 'websocket_channel_factory.dart';
 import '../models/nostr_event.dart';
 import '../models/filter.dart';
-import '../models/relay_message.dart';
 import '../utils/logger.dart';
 
 class ExternalRelayClient {

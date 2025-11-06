@@ -1,7 +1,6 @@
 // ABOUTME: Manages client subscriptions and routes events to matching subscriptions
 // ABOUTME: Handles REQ/CLOSE messages and provides efficient event routing with <10ms performance
 import 'dart:async';
-import 'package:logging/logging.dart';
 import '../models/subscription.dart';
 import '../models/nostr_event.dart';
 import '../models/relay_message.dart';

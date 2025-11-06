@@ -2,12 +2,9 @@
 // ABOUTME: Provides synchronous function calls instead of network communication
 
 import 'dart:async';
-import 'dart:convert';
 import 'package:uuid/uuid.dart';
 import '../models/nostr_event.dart';
-import '../models/filter.dart';
 import '../models/relay_message.dart';
-import '../models/subscription.dart';
 import '../storage/event_store.dart';
 import '../utils/logger.dart';
 import 'subscription_manager.dart';
@@ -30,7 +27,6 @@ import 'embedded_nostr_relay.dart';
 class FunctionChannelRelay {
   final SubscriptionManager _subscriptionManager;
   final EventStore _eventStore;
-  final EmbeddedNostrRelay _embeddedRelay;
   final Uuid _uuid = const Uuid();
 
   // Track active sessions and their subscriptions
@@ -39,10 +35,9 @@ class FunctionChannelRelay {
   FunctionChannelRelay({
     required SubscriptionManager subscriptionManager,
     required EventStore eventStore,
-    required EmbeddedNostrRelay embeddedRelay,
+    required EmbeddedNostrRelay embeddedRelay, // Kept for API compatibility
   }) : _subscriptionManager = subscriptionManager,
-       _eventStore = eventStore,
-       _embeddedRelay = embeddedRelay;
+       _eventStore = eventStore;
 
   /// Create a new session for a client.
   ///
@@ -96,7 +91,7 @@ class FunctionChannelRelay {
 
     try {
       // Use subscription manager's handleReq method
-      final subscription = await _subscriptionManager.handleReq(session.sessionId, req);
+      await _subscriptionManager.handleReq(session.sessionId, req);
 
       // Note: Event delivery is handled through subscription manager's broadcastEvent
 

@@ -1,7 +1,6 @@
 // ABOUTME: File utilities that work across all platforms including web
 // ABOUTME: Provides safe file operations using conditional compilation
 
-import 'package:flutter/foundation.dart';
 import 'file_utils_stub.dart'
   if (dart.library.io) 'file_utils_io.dart';
 

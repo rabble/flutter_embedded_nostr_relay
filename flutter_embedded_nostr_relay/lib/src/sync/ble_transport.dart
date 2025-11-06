@@ -2,8 +2,6 @@
 // ABOUTME: Handles Bluetooth Low Energy connections with packet fragmentation
 
 import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
 import 'transport.dart';
 import '../utils/logger.dart';
 
