@@ -526,23 +526,50 @@ class EventStore {
   _QueryParts _buildQuery(Filter filter) {
     final conditions = <String>[];
     final args = <dynamic>[];
-    
+
     // Base query
     var sql = 'SELECT DISTINCT e.* FROM events e';
-    
-    // Join tags table if needed
-    bool needsTagJoin = filter.eTags != null || 
-                       filter.pTags != null || 
-                       filter.aTags != null || 
+
+    // Check if there's a NIP-50 search query
+    final hasSearch = filter.unknownFields != null &&
+                     filter.unknownFields!.containsKey('search') &&
+                     (filter.unknownFields!['search'] as String?)?.trim().isNotEmpty == true;
+
+    // Join tags table if needed for tag filters OR for NIP-50 search
+    bool needsTagJoin = filter.eTags != null ||
+                       filter.pTags != null ||
+                       filter.aTags != null ||
                        filter.dTags != null ||
-                       (filter.tags != null && filter.tags!.isNotEmpty);
-    
+                       (filter.tags != null && filter.tags!.isNotEmpty) ||
+                       hasSearch;  // ALWAYS join tags for search to check hashtags/titles
+
     if (needsTagJoin) {
       sql += ' LEFT JOIN tags t ON e.id = t.event_id';
     }
-    
+
     // Always exclude deleted events
     conditions.add('e.deleted = 0');
+
+    // NIP-50: Search in content and tags (full-text search)
+    if (filter.unknownFields != null && filter.unknownFields!.containsKey('search')) {
+      final searchQuery = filter.unknownFields!['search'] as String?;
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        // Search in event content OR tag values
+        // Using LIKE for case-insensitive substring matching
+        final searchPattern = '%${searchQuery.trim()}%';
+
+        if (needsTagJoin) {
+          // Search in both content and tag values when tags are joined
+          conditions.add('(e.content LIKE ? OR t.tag_value LIKE ?)');
+          args.add(searchPattern);
+          args.add(searchPattern);
+        } else {
+          // Only search content if no tag join
+          conditions.add('e.content LIKE ?');
+          args.add(searchPattern);
+        }
+      }
+    }
     
     // Filter by IDs
     if (filter.ids != null && filter.ids!.isNotEmpty) {

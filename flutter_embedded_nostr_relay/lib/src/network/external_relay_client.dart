@@ -222,9 +222,21 @@ class ExternalRelayClient {
         if (filter['#t'] != null) {
           RelayLogger.info('[RELAY-CLIENT->$url] Filter $i has hashtag filter: ${filter['#t']}');
         }
+        // Log divine extensions (sort, int#, cursor)
+        if (filter['sort'] != null) {
+          RelayLogger.info('[RELAY-CLIENT->$url] ✨ Filter $i has DIVINE SORT: ${filter['sort']}');
+        }
+        filter.forEach((key, value) {
+          if (key.startsWith('int#')) {
+            RelayLogger.info('[RELAY-CLIENT->$url] ✨ Filter $i has DIVINE INT FILTER $key: $value');
+          }
+        });
+        if (filter['cursor'] != null) {
+          RelayLogger.info('[RELAY-CLIENT->$url] ✨ Filter $i has DIVINE CURSOR: ${filter['cursor']}');
+        }
         // Log all tag filters
         filter.forEach((key, value) {
-          if (key.startsWith('#')) {
+          if (key.startsWith('#') && !key.startsWith('int#')) {
             RelayLogger.info('[RELAY-CLIENT->$url] Filter $i has tag filter $key: $value');
           }
         });

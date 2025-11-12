@@ -149,6 +149,9 @@ class Filter extends Equatable {
   @JsonKey(includeFromJson: false, includeToJson: false)
   final Map<String, dynamic>? _unknownFields;
 
+  /// Get unknown fields (for NIP-50 search, divine extensions, etc.)
+  Map<String, dynamic>? get unknownFields => _unknownFields;
+
   const Filter({
     this.ids,
     this.authors,
