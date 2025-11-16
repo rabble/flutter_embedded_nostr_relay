@@ -150,6 +150,11 @@ class EmbeddedNostrRelay {
   // Write queue for batching external events to prevent database lock contention
   late final EventWriteQueue _writeQueue;
 
+  // Pending events queue for retry when external relays reconnect
+  final Map<String, List<NostrEvent>> _pendingEventsByRelay = {}; // relayUrl -> List<NostrEvent>
+  final Set<String> _pendingEventIds = {}; // Track event IDs to avoid duplicates
+  static const int _maxPendingEventsPerRelay = 100; // Limit queue size
+
   bool _initialized = false;
   bool _isShuttingDown = false;
   Timer? _gcTimer;
@@ -661,13 +666,16 @@ class EmbeddedNostrRelay {
       if (client.isConnected) {
         _externalRelays[url] = client;
         _relaySubscriptions[url] = {};
-        
+
         RelayLogger.info('[ADD-RELAY] Successfully connected to external relay: $url');
         RelayLogger.info('[ADD-RELAY] Total external relays connected: ${_externalRelays.length}');
-        
+
         // Sync existing subscriptions to the new relay
         await _syncSubscriptionsToRelay(url);
-        
+
+        // Flush any pending events to this relay
+        await _flushPendingEvents(url);
+
         RelayLogger.info('[ADD-RELAY] Completed setup for external relay: $url');
       } else {
         RelayLogger.warning('[ADD-RELAY] Failed to establish connection to external relay: $url');
@@ -769,19 +777,120 @@ class EmbeddedNostrRelay {
   }
   
   Future<void> _publishToExternalRelays(NostrEvent event) async {
+    bool anySuccess = false;
+
     for (final entry in _externalRelays.entries) {
       final relayUrl = entry.key;
       final client = entry.value;
-      
+
       if (client.isConnected) {
         try {
           await client.sendEvent(event);
-          RelayLogger.debug('Published event ${event.id} to external relay $relayUrl');
+          RelayLogger.info('✅ Published event ${event.id} to external relay $relayUrl');
+          anySuccess = true;
+
+          // Remove from pending queue if it was queued
+          if (_pendingEventIds.contains(event.id)) {
+            _pendingEventsByRelay[relayUrl]?.removeWhere((e) => e.id == event.id);
+            if (_pendingEventsByRelay[relayUrl]?.isEmpty ?? false) {
+              _pendingEventsByRelay.remove(relayUrl);
+            }
+          }
         } catch (e) {
-          RelayLogger.error('Failed to publish event to $relayUrl: $e');
+          RelayLogger.error('❌ Failed to publish event ${event.id} to $relayUrl: $e');
+          _queueEventForRetry(relayUrl, event);
         }
+      } else {
+        // Relay not connected - queue for retry
+        RelayLogger.warning('⚠️  Relay $relayUrl not connected, queueing event ${event.id} for retry');
+        _queueEventForRetry(relayUrl, event);
       }
     }
+
+    // Log if no external relays succeeded
+    if (!anySuccess && _externalRelays.isNotEmpty) {
+      RelayLogger.warning('⚠️  Event ${event.id} failed to publish to ALL external relays - queued for retry');
+    }
+  }
+
+  /// Queue an event for retry when relay reconnects
+  void _queueEventForRetry(String relayUrl, NostrEvent event) {
+    // Avoid duplicates
+    if (_pendingEventIds.contains(event.id)) {
+      return;
+    }
+
+    // Initialize relay queue if needed
+    _pendingEventsByRelay[relayUrl] ??= [];
+
+    // Check queue size limit
+    if (_pendingEventsByRelay[relayUrl]!.length >= _maxPendingEventsPerRelay) {
+      RelayLogger.warning('Pending queue for $relayUrl is full (${_maxPendingEventsPerRelay} events), dropping oldest event');
+      final oldestEvent = _pendingEventsByRelay[relayUrl]!.removeAt(0);
+      _pendingEventIds.remove(oldestEvent.id);
+    }
+
+    // Add to queue
+    _pendingEventsByRelay[relayUrl]!.add(event);
+    _pendingEventIds.add(event.id);
+
+    RelayLogger.info('📝 Queued event ${event.id} for retry to $relayUrl (${_pendingEventsByRelay[relayUrl]!.length} pending)');
+  }
+
+  /// Flush pending events to a specific relay (called when relay reconnects)
+  Future<void> _flushPendingEvents(String relayUrl) async {
+    final pendingEvents = _pendingEventsByRelay[relayUrl];
+    if (pendingEvents == null || pendingEvents.isEmpty) {
+      return;
+    }
+
+    RelayLogger.info('🔄 Flushing ${pendingEvents.length} pending events to $relayUrl');
+
+    final client = _externalRelays[relayUrl];
+    if (client == null || !client.isConnected) {
+      RelayLogger.warning('Cannot flush pending events - relay $relayUrl not connected');
+      return;
+    }
+
+    // Make a copy to avoid concurrent modification
+    final eventsToPublish = List<NostrEvent>.from(pendingEvents);
+    var successCount = 0;
+    var failCount = 0;
+
+    for (final event in eventsToPublish) {
+      try {
+        await client.sendEvent(event);
+        RelayLogger.debug('✅ Retry published event ${event.id} to $relayUrl');
+        successCount++;
+
+        // Remove from pending
+        pendingEvents.remove(event);
+        _pendingEventIds.remove(event.id);
+      } catch (e) {
+        RelayLogger.error('❌ Retry failed for event ${event.id} to $relayUrl: $e');
+        failCount++;
+        // Keep in queue for next retry
+      }
+    }
+
+    RelayLogger.info('🔄 Flush complete for $relayUrl: $successCount succeeded, $failCount failed');
+
+    // Clean up empty queue
+    if (pendingEvents.isEmpty) {
+      _pendingEventsByRelay.remove(relayUrl);
+    }
+  }
+
+  /// Get pending events count for diagnostics
+  int getPendingEventsCount() {
+    return _pendingEventIds.length;
+  }
+
+  /// Get pending events by relay for diagnostics
+  Map<String, int> getPendingEventsByRelay() {
+    return _pendingEventsByRelay.map(
+      (relay, events) => MapEntry(relay, events.length),
+    );
   }
   
   Future<void> _subscribeToExternalRelays(String subscriptionId, List<Filter> filters) async {
