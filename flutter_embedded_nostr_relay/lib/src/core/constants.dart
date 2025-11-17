@@ -45,7 +45,7 @@ class RelayConstants {
   
   // Database
   static const String databaseName = 'nostr_relay.db';
-  static const int databaseVersion = 1;
+  static const int databaseVersion = 2; // v2: Add pending_publishes table for external relay retry queue
   static const int batchInsertSize = 1000;
   static const Duration vacuumInterval = Duration(days: 1);
   

@@ -2,8 +2,10 @@
 // ABOUTME: Coordinates storage, networking, subscriptions and P2P sync
 
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
+import 'package:sqflite/sqflite.dart' show ConflictAlgorithm;
 import '../models/nostr_event.dart';
 import '../models/filter.dart';
 import '../models/subscription.dart';
@@ -703,7 +705,10 @@ class EmbeddedNostrRelay {
   }
   
   /// Get list of connected external relays
-  List<String> get connectedRelays => _externalRelays.keys.toList();
+  List<String> get connectedRelays => _externalRelays.entries
+      .where((entry) => entry.value.isConnected)
+      .map((entry) => entry.key)
+      .toList();
   
   void _handleExternalEvent(String relayUrl, NostrEvent event) {
     RelayLogger.info('[EXTERNAL-EVENT] Received event ${event.id} from $relayUrl - kind: ${event.kind}');
@@ -772,14 +777,40 @@ class EmbeddedNostrRelay {
     for (final entry in _externalRelays.entries) {
       final relayUrl = entry.key;
       final client = entry.value;
-      
-      if (client.isConnected) {
+
+      // Check connection status and reconnect if needed - do this RIGHT before publishing
+      // to minimize race conditions
+      if (!client.isConnected) {
+        RelayLogger.info('🔌 Relay $relayUrl disconnected, attempting reconnection...');
+        try {
+          await client.connect();
+          // Wait for connection to establish
+          await Future.delayed(Duration(milliseconds: 1000));
+
+          if (client.isConnected) {
+            RelayLogger.info('✅ Successfully reconnected to $relayUrl');
+          } else {
+            RelayLogger.warning('⚠️ Reconnection failed - relay still disconnected: $relayUrl');
+          }
+        } catch (e) {
+          RelayLogger.error('❌ Reconnection attempt failed for $relayUrl: $e');
+        }
+      }
+
+      // Now attempt to publish - check connection one final time
+      final isConnectedNow = client.isConnected;
+      RelayLogger.debug('📊 Relay $relayUrl connection status before publish: $isConnectedNow');
+
+      if (isConnectedNow) {
         try {
           await client.sendEvent(event);
-          RelayLogger.debug('Published event ${event.id} to external relay $relayUrl');
+          RelayLogger.info('📤 Successfully published event ${event.id} to external relay $relayUrl');
         } catch (e) {
-          RelayLogger.error('Failed to publish event to $relayUrl: $e');
+          RelayLogger.error('❌ Failed to publish event ${event.id} to $relayUrl: $e');
         }
+      } else {
+        // Relay not connected even after reconnection attempt
+        RelayLogger.warning('⚠️  Relay $relayUrl not connected after reconnect attempt, cannot publish event ${event.id}');
       }
     }
   }
@@ -842,7 +873,7 @@ class EmbeddedNostrRelay {
       }
     }
   }
-  
+
   /// Shutdown the relay
   Future<void> shutdown() async {
     RelayLogger.info('Shutting down embedded relay');
