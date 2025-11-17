@@ -713,7 +713,10 @@ class EmbeddedNostrRelay {
   }
   
   /// Get list of connected external relays
-  List<String> get connectedRelays => _externalRelays.keys.toList();
+  List<String> get connectedRelays => _externalRelays.entries
+      .where((entry) => entry.value.isConnected)
+      .map((entry) => entry.key)
+      .toList();
   
   void _handleExternalEvent(String relayUrl, NostrEvent event) {
     RelayLogger.info('[EXTERNAL-EVENT] Received event ${event.id} from $relayUrl - kind: ${event.kind}');
