@@ -45,9 +45,14 @@ class RelayConstants {
   
   // Database
   static const String databaseName = 'nostr_relay.db';
-  static const int databaseVersion = 1;
+  static const int databaseVersion = 2; // v2: Add pending_publishes table for external relay retry queue
   static const int batchInsertSize = 1000;
   static const Duration vacuumInterval = Duration(days: 1);
+
+  // Publish queue
+  static const Duration publishRetryInterval = Duration(seconds: 30);
+  static const int maxPublishRetries = 20; // ~10 minutes of retries
+  static const Duration publishRetryBackoffMultiplier = Duration(seconds: 2);
   
   // P2P Sync
   static const int negentropyFrameSize = 60000; // Leave room for protocol overhead

@@ -179,7 +179,23 @@ class DatabaseHelper {
         metadata TEXT
       );
     ''');
-    
+
+    // Pending publishes table (for external relay retry queue)
+    await db.execute('''
+      CREATE TABLE pending_publishes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id TEXT NOT NULL,
+        relay_url TEXT NOT NULL,
+        event_json TEXT NOT NULL,
+        retry_count INTEGER DEFAULT 0,
+        last_attempt INTEGER,
+        created_at INTEGER NOT NULL,
+
+        UNIQUE(event_id, relay_url),
+        FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+      );
+    ''');
+
     // Create indexes
     await _createIndexes(db);
   }
@@ -208,15 +224,39 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_tags_p ON tags(tag_name, tag_value) WHERE tag_name = \'p\';');
     await db.execute('CREATE INDEX idx_tags_a ON tags(tag_name, tag_value) WHERE tag_name = \'a\';');
     await db.execute('CREATE INDEX idx_tags_d ON tags(tag_name, tag_value) WHERE tag_name = \'d\';');
+
+    // Pending publishes indexes
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_pending_publishes_event ON pending_publishes(event_id);');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_pending_publishes_relay ON pending_publishes(relay_url);');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_pending_publishes_retry ON pending_publishes(retry_count, last_attempt);');
   }
   
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     RelayLogger.db('upgrade', 'Upgrading database from v$oldVersion to v$newVersion');
-    
-    // Handle future migrations here
+
+    // Handle migrations
     if (oldVersion < 2) {
-      // Example migration
-      // await db.execute('ALTER TABLE events ADD COLUMN new_field TEXT;');
+      // Add pending_publishes table for external relay publish queue
+      RelayLogger.db('upgrade', 'Adding pending_publishes table');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS pending_publishes (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          event_id TEXT NOT NULL,
+          relay_url TEXT NOT NULL,
+          event_json TEXT NOT NULL,
+          retry_count INTEGER DEFAULT 0,
+          last_attempt INTEGER,
+          created_at INTEGER NOT NULL,
+
+          UNIQUE(event_id, relay_url),
+          FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+        );
+      ''');
+
+      // Create index for pending publishes
+      await db.execute('CREATE INDEX idx_pending_publishes_event ON pending_publishes(event_id);');
+      await db.execute('CREATE INDEX idx_pending_publishes_relay ON pending_publishes(relay_url);');
+      await db.execute('CREATE INDEX idx_pending_publishes_retry ON pending_publishes(retry_count, last_attempt);');
     }
   }
   

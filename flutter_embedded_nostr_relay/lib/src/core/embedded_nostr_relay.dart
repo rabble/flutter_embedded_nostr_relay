@@ -2,8 +2,10 @@
 // ABOUTME: Coordinates storage, networking, subscriptions and P2P sync
 
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
+import 'package:sqflite/sqflite.dart' show ConflictAlgorithm;
 import '../models/nostr_event.dart';
 import '../models/filter.dart';
 import '../models/subscription.dart';
@@ -153,6 +155,7 @@ class EmbeddedNostrRelay {
   bool _initialized = false;
   bool _isShuttingDown = false;
   Timer? _gcTimer;
+  Timer? _retryPublishTimer;
 
   // Function channel interface (replaces WebSocket server)
   FunctionChannelRelay? _functionChannel;
@@ -225,6 +228,13 @@ class EmbeddedNostrRelay {
           (_) => _runGarbageCollection(),
         );
       }
+
+      // Start publish retry worker
+      _retryPublishTimer = Timer.periodic(
+        RelayConstants.publishRetryInterval,
+        (_) => _retryPendingPublishes(),
+      );
+      RelayLogger.info('Publish retry worker started (${RelayConstants.publishRetryInterval.inSeconds}s interval)');
 
       // Initialize function channel if requested
       if (useFunctionChannel) {
@@ -769,16 +779,69 @@ class EmbeddedNostrRelay {
   }
   
   Future<void> _publishToExternalRelays(NostrEvent event) async {
+    final db = await DatabaseHelper.instance.database;
+    final eventJson = jsonEncode(event.toJson());
+    final now = DateTime.now().millisecondsSinceEpoch;
+
     for (final entry in _externalRelays.entries) {
       final relayUrl = entry.key;
       final client = entry.value;
-      
+
       if (client.isConnected) {
         try {
           await client.sendEvent(event);
-          RelayLogger.debug('Published event ${event.id} to external relay $relayUrl');
+          RelayLogger.debug('📤 Published event ${event.id} to external relay $relayUrl');
+
+          // Remove from pending queue if it was queued before
+          try {
+            await db.delete(
+              'pending_publishes',
+              where: 'event_id = ? AND relay_url = ?',
+              whereArgs: [event.id, relayUrl],
+            );
+          } catch (e) {
+            RelayLogger.debug('Failed to remove from pending queue: $e');
+          }
         } catch (e) {
-          RelayLogger.error('Failed to publish event to $relayUrl: $e');
+          RelayLogger.error('❌ Failed to publish event ${event.id} to $relayUrl: $e');
+
+          // Add to retry queue
+          try {
+            await db.insert(
+              'pending_publishes',
+              {
+                'event_id': event.id,
+                'relay_url': relayUrl,
+                'event_json': eventJson,
+                'retry_count': 0,
+                'last_attempt': now,
+                'created_at': now,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+            RelayLogger.info('📝 Queued event ${event.id} for retry to $relayUrl');
+          } catch (dbError) {
+            RelayLogger.error('Failed to queue event for retry: $dbError');
+          }
+        }
+      } else {
+        // Relay not connected - add to queue for retry
+        RelayLogger.warning('⚠️  Relay $relayUrl not connected, queuing event ${event.id} for retry');
+        try {
+          await db.insert(
+            'pending_publishes',
+            {
+              'event_id': event.id,
+              'relay_url': relayUrl,
+              'event_json': eventJson,
+              'retry_count': 0,
+              'last_attempt': now,
+              'created_at': now,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        } catch (dbError) {
+          RelayLogger.error('Failed to queue event for retry: $dbError');
         }
       }
     }
@@ -843,6 +906,131 @@ class EmbeddedNostrRelay {
     }
   }
   
+  /// Get metrics about pending publishes
+  Future<Map<String, dynamic>> getPendingPublishMetrics() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+
+      // Get total count
+      final countResult = await db.rawQuery(
+        'SELECT COUNT(*) as total FROM pending_publishes',
+      );
+      final total = countResult.first['total'] as int;
+
+      // Get count by relay
+      final relayResult = await db.rawQuery(
+        'SELECT relay_url, COUNT(*) as count FROM pending_publishes GROUP BY relay_url',
+      );
+      final byRelay = Map<String, int>.fromEntries(
+        relayResult.map((row) => MapEntry(
+          row['relay_url'] as String,
+          row['count'] as int,
+        )),
+      );
+
+      // Get events near max retries
+      final nearMaxResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM pending_publishes WHERE retry_count >= ?',
+        [RelayConstants.maxPublishRetries - 5],
+      );
+      final nearMax = nearMaxResult.first['count'] as int;
+
+      return {
+        'total_pending': total,
+        'by_relay': byRelay,
+        'near_max_retries': nearMax,
+      };
+    } catch (e) {
+      RelayLogger.error('Failed to get pending publish metrics: $e');
+      return {
+        'total_pending': 0,
+        'by_relay': <String, int>{},
+        'near_max_retries': 0,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Retry publishing pending events to external relays
+  Future<void> _retryPendingPublishes() async {
+    if (_isShuttingDown) return;
+
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      // Get pending publishes that need retry
+      final pendingRows = await db.query(
+        'pending_publishes',
+        where: 'retry_count < ?',
+        whereArgs: [RelayConstants.maxPublishRetries],
+        orderBy: 'created_at ASC',
+        limit: 100,
+      );
+
+      if (pendingRows.isEmpty) return;
+
+      RelayLogger.info('🔄 Retrying ${pendingRows.length} pending publishes');
+
+      for (final row in pendingRows) {
+        final eventId = row['event_id'] as String;
+        final relayUrl = row['relay_url'] as String;
+        final eventJson = row['event_json'] as String;
+        final retryCount = row['retry_count'] as int;
+        final id = row['id'] as int;
+
+        // Check if relay is connected
+        final client = _externalRelays[relayUrl];
+        if (client == null || !client.isConnected) {
+          RelayLogger.debug('Relay $relayUrl not connected, skipping retry for event $eventId');
+          continue;
+        }
+
+        try {
+          // Parse event from JSON
+          final eventMap = jsonDecode(eventJson) as Map<String, dynamic>;
+          final event = NostrEvent.fromJson(eventMap);
+
+          // Attempt to publish
+          await client.sendEvent(event);
+          RelayLogger.info('✅ Retry SUCCESS: Published event $eventId to $relayUrl (retry #$retryCount)');
+
+          // Remove from queue on success
+          await db.delete(
+            'pending_publishes',
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        } catch (e) {
+          RelayLogger.warning('❌ Retry FAILED: Event $eventId to $relayUrl (retry #$retryCount): $e');
+
+          // Increment retry count
+          final newRetryCount = retryCount + 1;
+          if (newRetryCount >= RelayConstants.maxPublishRetries) {
+            RelayLogger.error('⚠️  Max retries reached for event $eventId to $relayUrl, removing from queue');
+            await db.delete(
+              'pending_publishes',
+              where: 'id = ?',
+              whereArgs: [id],
+            );
+          } else {
+            await db.update(
+              'pending_publishes',
+              {
+                'retry_count': newRetryCount,
+                'last_attempt': now,
+              },
+              where: 'id = ?',
+              whereArgs: [id],
+            );
+          }
+        }
+      }
+    } catch (e) {
+      RelayLogger.error('Error in retry worker: $e');
+    }
+  }
+
   /// Shutdown the relay
   Future<void> shutdown() async {
     RelayLogger.info('Shutting down embedded relay');
@@ -852,6 +1040,7 @@ class EmbeddedNostrRelay {
 
     // Cancel timers
     _gcTimer?.cancel();
+    _retryPublishTimer?.cancel();
 
     // Disconnect from external relays (stops new events from arriving)
     for (final relay in _externalRelays.values) {
