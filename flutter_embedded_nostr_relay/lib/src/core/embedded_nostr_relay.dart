@@ -790,28 +790,33 @@ class EmbeddedNostrRelay {
       final relayUrl = entry.key;
       final client = entry.value;
 
-      // Ensure relay is connected before publishing
+      // Check connection status and reconnect if needed - do this RIGHT before publishing
+      // to minimize race conditions
       if (!client.isConnected) {
         RelayLogger.info('🔌 Relay $relayUrl disconnected, attempting reconnection...');
         try {
           await client.connect();
-          // Give it a moment to establish connection
-          await Future.delayed(Duration(milliseconds: 500));
+          // Wait for connection to establish
+          await Future.delayed(Duration(milliseconds: 1000));
 
           if (client.isConnected) {
             RelayLogger.info('✅ Successfully reconnected to $relayUrl');
           } else {
-            RelayLogger.warning('⚠️ Failed to reconnect to $relayUrl');
+            RelayLogger.warning('⚠️ Reconnection failed - relay still disconnected: $relayUrl');
           }
         } catch (e) {
           RelayLogger.error('❌ Reconnection attempt failed for $relayUrl: $e');
         }
       }
 
-      if (client.isConnected) {
+      // Now attempt to publish - check connection one final time
+      final isConnectedNow = client.isConnected;
+      RelayLogger.debug('📊 Relay $relayUrl connection status before publish: $isConnectedNow');
+
+      if (isConnectedNow) {
         try {
           await client.sendEvent(event);
-          RelayLogger.debug('📤 Published event ${event.id} to external relay $relayUrl');
+          RelayLogger.info('📤 Successfully published event ${event.id} to external relay $relayUrl');
 
           // Remove from pending queue if it was queued before
           try {
@@ -840,14 +845,14 @@ class EmbeddedNostrRelay {
               },
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
-            RelayLogger.info('📝 Queued event ${event.id} for retry to $relayUrl');
+            RelayLogger.info('📝 Queued event ${event.id} for retry to $relayUrl (publish error)');
           } catch (dbError) {
             RelayLogger.error('Failed to queue event for retry: $dbError');
           }
         }
       } else {
-        // Relay not connected - add to queue for retry
-        RelayLogger.warning('⚠️  Relay $relayUrl not connected, queuing event ${event.id} for retry');
+        // Relay not connected even after reconnection attempt - queue for retry
+        RelayLogger.warning('⚠️  Relay $relayUrl not connected after reconnect attempt, queuing event ${event.id} for retry');
         try {
           final insertId = await db.insert(
             'pending_publishes',
