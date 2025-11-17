@@ -790,6 +790,24 @@ class EmbeddedNostrRelay {
       final relayUrl = entry.key;
       final client = entry.value;
 
+      // Ensure relay is connected before publishing
+      if (!client.isConnected) {
+        RelayLogger.info('🔌 Relay $relayUrl disconnected, attempting reconnection...');
+        try {
+          await client.connect();
+          // Give it a moment to establish connection
+          await Future.delayed(Duration(milliseconds: 500));
+
+          if (client.isConnected) {
+            RelayLogger.info('✅ Successfully reconnected to $relayUrl');
+          } else {
+            RelayLogger.warning('⚠️ Failed to reconnect to $relayUrl');
+          }
+        } catch (e) {
+          RelayLogger.error('❌ Reconnection attempt failed for $relayUrl: $e');
+        }
+      }
+
       if (client.isConnected) {
         try {
           await client.sendEvent(event);
