@@ -873,51 +873,6 @@ class EmbeddedNostrRelay {
       }
     }
   }
-  
-  /// Get metrics about pending publishes
-  Future<Map<String, dynamic>> getPendingPublishMetrics() async {
-    try {
-      final db = await DatabaseHelper.instance.database;
-
-      // Get total count
-      final countResult = await db.rawQuery(
-        'SELECT COUNT(*) as total FROM pending_publishes',
-      );
-      final total = countResult.first['total'] as int;
-
-      // Get count by relay
-      final relayResult = await db.rawQuery(
-        'SELECT relay_url, COUNT(*) as count FROM pending_publishes GROUP BY relay_url',
-      );
-      final byRelay = Map<String, int>.fromEntries(
-        relayResult.map((row) => MapEntry(
-          row['relay_url'] as String,
-          row['count'] as int,
-        )),
-      );
-
-      // Get events near max retries
-      final nearMaxResult = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM pending_publishes WHERE retry_count >= ?',
-        [RelayConstants.maxPublishRetries - 5],
-      );
-      final nearMax = nearMaxResult.first['count'] as int;
-
-      return {
-        'total_pending': total,
-        'by_relay': byRelay,
-        'near_max_retries': nearMax,
-      };
-    } catch (e) {
-      RelayLogger.error('Failed to get pending publish metrics: $e');
-      return {
-        'total_pending': 0,
-        'by_relay': <String, int>{},
-        'near_max_retries': 0,
-        'error': e.toString(),
-      };
-    }
-  }
 
   /// Shutdown the relay
   Future<void> shutdown() async {
