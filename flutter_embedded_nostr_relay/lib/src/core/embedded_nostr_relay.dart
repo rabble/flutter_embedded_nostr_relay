@@ -828,7 +828,7 @@ class EmbeddedNostrRelay {
         // Relay not connected - add to queue for retry
         RelayLogger.warning('⚠️  Relay $relayUrl not connected, queuing event ${event.id} for retry');
         try {
-          await db.insert(
+          final insertId = await db.insert(
             'pending_publishes',
             {
               'event_id': event.id,
@@ -840,6 +840,7 @@ class EmbeddedNostrRelay {
             },
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
+          RelayLogger.info('📝 Event queued in database (row $insertId): ${event.id} -> $relayUrl');
         } catch (dbError) {
           RelayLogger.error('Failed to queue event for retry: $dbError');
         }
@@ -953,9 +954,13 @@ class EmbeddedNostrRelay {
 
   /// Retry publishing pending events to external relays
   Future<void> _retryPendingPublishes() async {
-    if (_isShuttingDown) return;
+    if (_isShuttingDown) {
+      RelayLogger.debug('🔄 Retry worker: Skipping retry (shutting down)');
+      return;
+    }
 
     try {
+      RelayLogger.debug('🔄 Retry worker: Checking for pending publishes...');
       final db = await DatabaseHelper.instance.database;
       final now = DateTime.now().millisecondsSinceEpoch;
 
@@ -967,6 +972,8 @@ class EmbeddedNostrRelay {
         orderBy: 'created_at ASC',
         limit: 100,
       );
+
+      RelayLogger.info('🔄 Retry worker: Found ${pendingRows.length} pending publishes');
 
       if (pendingRows.isEmpty) return;
 
