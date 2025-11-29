@@ -15,18 +15,26 @@ class ExternalRelayClient {
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
   bool _connected = false;
-  final _reconnectTimer = Timer.periodic(Duration(seconds: 5), (_) {});
+  Timer? _reconnectTimer;
   bool _shouldReconnect = true;
-  
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectAttempts = 10;
+  static const Duration _baseReconnectDelay = Duration(seconds: 2);
+  static const Duration _maxReconnectDelay = Duration(minutes: 5);
+
+  // Pending OK responses for verified sends
+  final Map<String, Completer<bool>> _pendingOkResponses = {};
+  static const Duration _okTimeout = Duration(seconds: 30);
+
   // Callbacks for different message types
   Function(NostrEvent)? onEvent;
   Function(String)? onEose;
   Function(String, bool, String?)? onOk;
   Function(String)? onNotice;
-  
-  ExternalRelayClient({required this.url}) {
-    _reconnectTimer.cancel(); // Cancel the dummy timer
-  }
+  Function()? onConnected;
+  Function()? onDisconnected;
+
+  ExternalRelayClient({required this.url});
   
   Future<void> connect() async {
     if (_connected) return;
@@ -71,7 +79,11 @@ class ExternalRelayClient {
         );
         
         _connected = true;
+        _reconnectAttempts = 0; // Reset on successful connection
+        _reconnectTimer?.cancel();
+        _reconnectTimer = null;
         RelayLogger.info('Connected to external relay: $url');
+        onConnected?.call();
       } catch (e) {
         RelayLogger.error('Failed to connect to relay: $e');
         _connected = false;
@@ -87,6 +99,8 @@ class ExternalRelayClient {
   
   Future<void> disconnect() async {
     _shouldReconnect = false;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     await _closeConnection();
   }
   
@@ -106,14 +120,63 @@ class ExternalRelayClient {
   }
   
   void _handleDisconnect() {
+    final wasConnected = _connected;
     _connected = false;
     _subscription?.cancel();
     _subscription = null;
     _channel = null;
-    if (_shouldReconnect) {
-      // TODO: Implement reconnection logic
-      RelayLogger.info('Will attempt to reconnect to $url');
+
+    // Fail any pending OK responses
+    for (final completer in _pendingOkResponses.values) {
+      if (!completer.isCompleted) {
+        completer.complete(false);
+      }
     }
+    _pendingOkResponses.clear();
+
+    // Notify listener of disconnection
+    if (wasConnected) {
+      onDisconnected?.call();
+    }
+
+    if (_shouldReconnect && _reconnectAttempts < _maxReconnectAttempts) {
+      _scheduleReconnect();
+    } else if (_reconnectAttempts >= _maxReconnectAttempts) {
+      RelayLogger.warning('Max reconnect attempts reached for $url');
+    }
+  }
+
+  void _scheduleReconnect() {
+    if (_reconnectTimer != null) return; // Already scheduled
+
+    // Exponential backoff: 2s, 4s, 8s, 16s, 32s, 64s, 128s, 256s... capped at 5 min
+    final delay = Duration(
+      milliseconds: (_baseReconnectDelay.inMilliseconds *
+              (1 << _reconnectAttempts.clamp(0, 8)))
+          .clamp(0, _maxReconnectDelay.inMilliseconds),
+    );
+
+    _reconnectAttempts++;
+    RelayLogger.info(
+        'Scheduling reconnect to $url in ${delay.inSeconds}s (attempt $_reconnectAttempts/$_maxReconnectAttempts)');
+
+    _reconnectTimer = Timer(delay, () async {
+      _reconnectTimer = null;
+      if (_shouldReconnect && !_connected) {
+        RelayLogger.info('Attempting reconnect to $url...');
+        await connect();
+      }
+    });
+  }
+
+  /// Force an immediate reconnection attempt, resetting the backoff
+  Future<void> reconnect() async {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _reconnectAttempts = 0;
+    _shouldReconnect = true;
+    await _closeConnection();
+    await connect();
   }
   
   void _handleMessage(dynamic message) {
@@ -174,11 +237,20 @@ class ExternalRelayClient {
   void _handleOkMessage(List<dynamic> message) {
     if (message.length >= 3) {
       final eventId = message[1] as String;
-      final status = message[2] as bool;
+      final accepted = message[2] as bool;
       final reason = message.length > 3 ? message[3] as String? : null;
-      
+
+      RelayLogger.info(
+          '[RELAY-CLIENT<-$url] OK for event $eventId: accepted=$accepted${reason != null ? ' reason=$reason' : ''}');
+
+      // Complete any pending verified send
+      final completer = _pendingOkResponses.remove(eventId);
+      if (completer != null && !completer.isCompleted) {
+        completer.complete(accepted);
+      }
+
       if (onOk != null) {
-        onOk!(eventId, status, reason);
+        onOk!(eventId, accepted, reason);
       }
     }
   }
@@ -253,7 +325,7 @@ class ExternalRelayClient {
   
   Future<bool> sendEvent(NostrEvent event) async {
     if (!_connected || _channel == null) return false;
-    
+
     try {
       final message = json.encode(['EVENT', event.toJson()]);
       _channel!.sink.add(message);
@@ -263,10 +335,131 @@ class ExternalRelayClient {
       return false;
     }
   }
-  
+
+  /// Send event and wait for OK response from relay
+  /// Returns true if relay accepted the event, false otherwise
+  Future<bool> sendEventWithVerification(NostrEvent event) async {
+    if (!_connected || _channel == null) {
+      RelayLogger.warning(
+          '[RELAY-CLIENT->$url] Cannot send verified EVENT - not connected');
+      return false;
+    }
+
+    try {
+      // Create completer for this event's OK response
+      final completer = Completer<bool>();
+      _pendingOkResponses[event.id] = completer;
+
+      final message = json.encode(['EVENT', event.toJson()]);
+      RelayLogger.info(
+          '[RELAY-CLIENT->$url] Sending EVENT ${event.id} (waiting for OK)');
+      _channel!.sink.add(message);
+
+      // Wait for OK with timeout
+      final result = await completer.future.timeout(
+        _okTimeout,
+        onTimeout: () {
+          RelayLogger.warning(
+              '[RELAY-CLIENT->$url] Timeout waiting for OK for event ${event.id}');
+          _pendingOkResponses.remove(event.id);
+          return false;
+        },
+      );
+
+      if (result) {
+        RelayLogger.info(
+            '[RELAY-CLIENT->$url] Event ${event.id} verified as received');
+      } else {
+        RelayLogger.warning(
+            '[RELAY-CLIENT->$url] Event ${event.id} was rejected by relay');
+      }
+
+      return result;
+    } catch (e) {
+      RelayLogger.error('[RELAY-CLIENT->$url] Error sending verified EVENT: $e');
+      _pendingOkResponses.remove(event.id);
+      return false;
+    }
+  }
+
+  /// Verify an event exists on this relay by requesting it back
+  /// Returns true if the event is found, false otherwise
+  Future<bool> verifyEventExists(String eventId,
+      {Duration timeout = const Duration(seconds: 10)}) async {
+    if (!_connected || _channel == null) {
+      RelayLogger.warning(
+          '[RELAY-CLIENT->$url] Cannot verify event - not connected');
+      return false;
+    }
+
+    final subscriptionId = 'verify_${eventId.substring(0, 8)}_${DateTime.now().millisecondsSinceEpoch}';
+    final completer = Completer<bool>();
+    bool eventFound = false;
+
+    // Temporarily listen for event response
+    final originalOnEvent = onEvent;
+    final originalOnEose = onEose;
+
+    onEvent = (event) {
+      if (event.id == eventId) {
+        eventFound = true;
+        if (!completer.isCompleted) {
+          completer.complete(true);
+        }
+      }
+      // Also call original handler
+      originalOnEvent?.call(event);
+    };
+
+    onEose = (subId) {
+      if (subId == subscriptionId && !completer.isCompleted) {
+        completer.complete(eventFound);
+      }
+      originalOnEose?.call(subId);
+    };
+
+    try {
+      // Request the specific event
+      final filter = Filter(ids: [eventId]);
+      await sendRequest(subscriptionId, [filter]);
+
+      // Wait for response with timeout
+      final result = await completer.future.timeout(
+        timeout,
+        onTimeout: () {
+          RelayLogger.warning(
+              '[RELAY-CLIENT->$url] Timeout verifying event $eventId');
+          return false;
+        },
+      );
+
+      // Close the subscription
+      await closeSubscription(subscriptionId);
+
+      // Restore original handlers
+      onEvent = originalOnEvent;
+      onEose = originalOnEose;
+
+      if (result) {
+        RelayLogger.info(
+            '[RELAY-CLIENT->$url] ✅ Event $eventId verified on relay');
+      } else {
+        RelayLogger.warning(
+            '[RELAY-CLIENT->$url] ❌ Event $eventId NOT found on relay');
+      }
+
+      return result;
+    } catch (e) {
+      RelayLogger.error('[RELAY-CLIENT->$url] Error verifying event: $e');
+      onEvent = originalOnEvent;
+      onEose = originalOnEose;
+      return false;
+    }
+  }
+
   Future<bool> closeSubscription(String subscriptionId) async {
     if (!_connected || _channel == null) return false;
-    
+
     try {
       final message = json.encode(['CLOSE', subscriptionId]);
       _channel!.sink.add(message);
@@ -276,6 +469,12 @@ class ExternalRelayClient {
       return false;
     }
   }
-  
+
   bool get isConnected => _connected;
+
+  /// Number of pending OK responses waiting
+  int get pendingOkCount => _pendingOkResponses.length;
+
+  /// Current reconnection attempt number
+  int get reconnectAttempts => _reconnectAttempts;
 }

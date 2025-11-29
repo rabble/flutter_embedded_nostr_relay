@@ -2,6 +2,7 @@
 // ABOUTME: Coordinates storage, networking, subscriptions and P2P sync
 
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import '../models/nostr_event.dart';
@@ -150,6 +151,10 @@ class EmbeddedNostrRelay {
   // Write queue for batching external events to prevent database lock contention
   late final EventWriteQueue _writeQueue;
 
+  // Publish queue for events that failed to publish to external relays
+  final Map<String, List<NostrEvent>> _publishQueue = {}; // relayUrl -> events
+  Timer? _publishRetryTimer;
+
   bool _initialized = false;
   bool _isShuttingDown = false;
   Timer? _gcTimer;
@@ -225,6 +230,17 @@ class EmbeddedNostrRelay {
           (_) => _runGarbageCollection(),
         );
       }
+
+      // Load publish queue from database (persisted from previous sessions)
+      await _loadPublishQueueFromDatabase();
+
+      // Start publish retry timer - retry failed publishes every 5 minutes
+      // This is just a safety net - immediate flush on reconnect is the primary mechanism
+      _publishRetryTimer = Timer.periodic(
+        const Duration(minutes: 5),
+        (_) => _retryQueuedPublishes(),
+      );
+      RelayLogger.info('Started publish retry timer (5 minute interval)');
 
       // Initialize function channel if requested
       if (useFunctionChannel) {
@@ -487,6 +503,37 @@ class EmbeddedNostrRelay {
 
     return stored;
   }
+
+  /// Verify an event exists on external relays by requesting it back
+  /// Returns a map of relay URL to verification result
+  Future<Map<String, bool>> verifyEventOnExternalRelays(String eventId) async {
+    final results = <String, bool>{};
+
+    for (final entry in _externalRelays.entries) {
+      final relayUrl = entry.key;
+      final client = entry.value;
+
+      if (client.isConnected) {
+        try {
+          final exists = await client.verifyEventExists(eventId);
+          results[relayUrl] = exists;
+        } catch (e) {
+          RelayLogger.error('Error verifying event $eventId on $relayUrl: $e');
+          results[relayUrl] = false;
+        }
+      } else {
+        RelayLogger.warning('Cannot verify event on $relayUrl - not connected');
+        results[relayUrl] = false;
+      }
+    }
+
+    // Log summary
+    final successCount = results.values.where((v) => v).length;
+    RelayLogger.info(
+        'Event $eventId verified on $successCount/${results.length} relays');
+
+    return results;
+  }
   
   /// Query events directly without subscription
   Future<List<NostrEvent>> queryEvents(List<Filter> filters) async {
@@ -545,6 +592,28 @@ class EmbeddedNostrRelay {
     final managerStats = _subscriptionManager.getStatistics();
     managerStats['internalSubscriptions'] = _internalSubscriptions.length;
     return managerStats;
+  }
+
+  /// Get publish queue statistics (from in-memory queue)
+  Map<String, dynamic> getPublishQueueStats() {
+    final stats = <String, dynamic>{};
+    int totalQueued = 0;
+
+    for (final entry in _publishQueue.entries) {
+      stats[entry.key] = entry.value.length;
+      totalQueued += entry.value.length;
+    }
+
+    stats['total_queued'] = totalQueued;
+    stats['relays_with_queued_events'] = _publishQueue.length;
+
+    return stats;
+  }
+
+  /// Get publish queue statistics from database (includes persisted state)
+  /// TODO: Update to use published_events instead of publish_queue
+  Future<Map<String, dynamic>> getPublishQueueStatsFromDatabase() async {
+    return await DatabaseHelper.instance.getPublishedEventsStats();
   }
 
   /// Create a function channel session for direct API access.
@@ -653,7 +722,17 @@ class EmbeddedNostrRelay {
     client.onNotice = (notice) {
       RelayLogger.info('[ADD-RELAY] NOTICE from $url: $notice');
     };
-    
+
+    // Set up connection state callbacks for reconnection handling
+    client.onConnected = () {
+      RelayLogger.info('[ADD-RELAY] ✅ Connected to $url - flushing publish queue');
+      _flushPublishQueue(url);
+    };
+
+    client.onDisconnected = () {
+      RelayLogger.warning('[ADD-RELAY] ❌ Disconnected from $url - will auto-reconnect');
+    };
+
     try {
       await client.connect();
       
@@ -667,7 +746,11 @@ class EmbeddedNostrRelay {
         
         // Sync existing subscriptions to the new relay
         await _syncSubscriptionsToRelay(url);
-        
+
+        // Load unpublished events for this relay and attempt to publish them
+        await _loadPublishQueueFromDatabase();
+        await _flushPublishQueue(url);
+
         RelayLogger.info('[ADD-RELAY] Completed setup for external relay: $url');
       } else {
         RelayLogger.warning('[ADD-RELAY] Failed to establish connection to external relay: $url');
@@ -772,15 +855,177 @@ class EmbeddedNostrRelay {
     for (final entry in _externalRelays.entries) {
       final relayUrl = entry.key;
       final client = entry.value;
-      
+
       if (client.isConnected) {
         try {
-          await client.sendEvent(event);
-          RelayLogger.debug('Published event ${event.id} to external relay $relayUrl');
+          // Use verified send to wait for OK response
+          final success = await client.sendEventWithVerification(event);
+          if (success) {
+            RelayLogger.info('✅ Published event ${event.id} to external relay $relayUrl (verified)');
+            // Record successful publish
+            await DatabaseHelper.instance.recordPublishedEvent(relayUrl, event.id);
+          } else {
+            RelayLogger.warning('❌ Failed to publish event ${event.id} to $relayUrl - adding to retry queue');
+            _queueEventForRetry(relayUrl, event);
+          }
         } catch (e) {
-          RelayLogger.error('Failed to publish event to $relayUrl: $e');
+          RelayLogger.error('Failed to publish event ${event.id} to $relayUrl: $e - adding to retry queue');
+          _queueEventForRetry(relayUrl, event);
+        }
+      } else {
+        RelayLogger.warning('Relay $relayUrl not connected - queueing event ${event.id} for retry');
+        _queueEventForRetry(relayUrl, event);
+      }
+    }
+  }
+
+  /// Queue an event for retry when relay connection is restored
+  void _queueEventForRetry(String relayUrl, NostrEvent event) {
+    if (!_publishQueue.containsKey(relayUrl)) {
+      _publishQueue[relayUrl] = [];
+    }
+
+    // Avoid duplicates - check if event already in queue
+    final exists = _publishQueue[relayUrl]!.any((e) => e.id == event.id);
+    if (!exists) {
+      // Enforce maximum queue size (1000 events per relay)
+      const maxQueueSize = 1000;
+      if (_publishQueue[relayUrl]!.length >= maxQueueSize) {
+        // Remove oldest event to make room
+        final removed = _publishQueue[relayUrl]!.removeAt(0);
+        RelayLogger.warning('Publish queue for $relayUrl full - dropping oldest event ${removed.id}');
+        // TODO: Update to use published_events approach
+      }
+
+      _publishQueue[relayUrl]!.add(event);
+      final queueSize = _publishQueue[relayUrl]!.length;
+      RelayLogger.info('Queued event ${event.id} for relay $relayUrl (queue size: $queueSize)');
+
+      // TODO: Replace with published_events approach - no need to persist failed publishes
+
+      // Warn if queue is getting large
+      if (queueSize > 100) {
+        RelayLogger.warning('Publish queue for $relayUrl is large ($queueSize events) - relay may be offline');
+      }
+    }
+  }
+
+  /// Flush the publish queue for a specific relay (called when relay connects)
+  Future<void> _flushPublishQueue(String relayUrl) async {
+    if (!_publishQueue.containsKey(relayUrl) || _publishQueue[relayUrl]!.isEmpty) {
+      return;
+    }
+
+    final client = _externalRelays[relayUrl];
+    if (client == null || !client.isConnected) {
+      RelayLogger.warning('Cannot flush publish queue - relay $relayUrl not connected');
+      return;
+    }
+
+    final events = List<NostrEvent>.from(_publishQueue[relayUrl]!);
+    RelayLogger.info('Flushing ${events.length} queued events to relay $relayUrl');
+
+    int successCount = 0;
+    final failedEvents = <NostrEvent>[];
+
+    for (final event in events) {
+      try {
+        // Use verified send to confirm receipt
+        final success = await client.sendEventWithVerification(event);
+        if (success) {
+          successCount++;
+          RelayLogger.info('✅ Successfully published queued event ${event.id} to $relayUrl (verified)');
+          // Record as published successfully
+          await DatabaseHelper.instance.recordPublishedEvent(relayUrl, event.id);
+        } else {
+          failedEvents.add(event);
+          RelayLogger.warning('❌ Failed to publish queued event ${event.id} to $relayUrl');
+        }
+      } catch (e) {
+        failedEvents.add(event);
+        RelayLogger.error('Error publishing queued event ${event.id} to $relayUrl: $e');
+      }
+    }
+
+    // Update queue with only failed events
+    _publishQueue[relayUrl] = failedEvents;
+
+    RelayLogger.info('Published $successCount/${events.length} queued events to $relayUrl (${failedEvents.length} still queued)');
+  }
+
+  /// Load publish queue from database on startup
+  /// Queries recent local events and identifies which haven't been published to each external relay
+  Future<void> _loadPublishQueueFromDatabase() async {
+    if (_externalRelays.isEmpty) {
+      RelayLogger.debug('No external relays configured, skipping publish queue load');
+      return;
+    }
+
+    try {
+      // Query recent events from the local database (last 30 days)
+      final cutoffTime = DateTime.now()
+          .subtract(const Duration(days: 30))
+          .millisecondsSinceEpoch ~/ 1000;
+
+      final recentEvents = await _eventStore.queryEvents([
+        Filter(since: cutoffTime, limit: 1000), // Get up to 1000 recent events
+      ]);
+
+      if (recentEvents.isEmpty) {
+        RelayLogger.info('No recent events found in local database');
+        return;
+      }
+
+      RelayLogger.info('Found ${recentEvents.length} recent events in local database');
+
+      // For each external relay, find unpublished events
+      for (final relayUrl in _externalRelays.keys) {
+        // Get set of event IDs already published to this relay
+        final publishedIds = await DatabaseHelper.instance.getPublishedEventIds(relayUrl);
+
+        // Find events that haven't been published to this relay
+        final unpublishedEvents = recentEvents
+            .where((event) => !publishedIds.contains(event.id))
+            .toList();
+
+        if (unpublishedEvents.isNotEmpty) {
+          _publishQueue[relayUrl] = unpublishedEvents;
+          RelayLogger.info('Queued ${unpublishedEvents.length} unpublished events for relay $relayUrl');
+        } else {
+          RelayLogger.debug('All recent events already published to $relayUrl');
         }
       }
+
+      final totalQueued = _publishQueue.values.fold<int>(
+        0,
+        (sum, events) => sum + events.length,
+      );
+      RelayLogger.info('Loaded publish queue: $totalQueued total events across ${_publishQueue.length} relays');
+
+    } catch (e) {
+      RelayLogger.error('Failed to load publish queue from database', e);
+    }
+  }
+
+  /// Retry publishing queued events to all connected relays (called periodically)
+  /// Reloads the queue from database to pick up any new unpublished events, then flushes
+  Future<void> _retryQueuedPublishes() async {
+    if (_externalRelays.isEmpty) {
+      RelayLogger.debug('No external relays configured, skipping retry');
+      return;
+    }
+
+    // Reload queue from database to pick up any new unpublished events
+    await _loadPublishQueueFromDatabase();
+
+    if (_publishQueue.isEmpty) {
+      RelayLogger.debug('No events queued for publishing');
+      return;
+    }
+
+    // Attempt to flush queue for each relay
+    for (final relayUrl in _publishQueue.keys.toList()) {
+      await _flushPublishQueue(relayUrl);
     }
   }
   
@@ -852,6 +1097,8 @@ class EmbeddedNostrRelay {
 
     // Cancel timers
     _gcTimer?.cancel();
+    _publishRetryTimer?.cancel();
+    RelayLogger.info('Cancelled publish retry timer');
 
     // Disconnect from external relays (stops new events from arriving)
     for (final relay in _externalRelays.values) {
