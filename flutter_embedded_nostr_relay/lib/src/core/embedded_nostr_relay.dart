@@ -564,11 +564,55 @@ class EmbeddedNostrRelay {
     if (!_initialized) {
       throw StateError('Relay not initialized. Call initialize() first.');
     }
-    
+
     await _eventStore.deleteEvents(eventIds);
     RelayLogger.info('Deleted ${eventIds.length} events');
   }
-  
+
+  /// Import events from external source (e.g., REST gateway) into local storage.
+  ///
+  /// This method batch-inserts events without publishing to external relays.
+  /// Useful for seeding local storage from cached REST responses.
+  ///
+  /// Returns the count of events actually stored (excludes duplicates).
+  Future<int> importEvents(List<NostrEvent> events) async {
+    if (!_initialized) {
+      throw StateError('Relay not initialized. Call initialize() first.');
+    }
+
+    if (events.isEmpty) return 0;
+
+    RelayLogger.info('import', 'Importing ${events.length} events from external source');
+
+    // Check which events already exist before importing
+    final existingIds = <String>{};
+    for (final event in events) {
+      final existing = await _eventStore.getEvent(event.id);
+      if (existing != null) {
+        existingIds.add(event.id);
+      }
+    }
+
+    // Batch insert all events
+    final storedCount = await _eventStore.storeEvents(events);
+
+    // Calculate count of newly stored events (excluding pre-existing ones)
+    final newEventsCount = events.length - existingIds.length;
+
+    // Notify subscribers about imported events (only new ones, not pre-existing)
+    for (final event in events) {
+      if (!existingIds.contains(event.id)) {
+        if (!_eventStreamController.isClosed) {
+          _eventStreamController.add(event);
+        }
+        await _subscriptionManager.routeEvent(event);
+      }
+    }
+
+    RelayLogger.info('import', 'Imported $newEventsCount/${events.length} events (storeEvents returned $storedCount)');
+    return newEventsCount;
+  }
+
   /// Get relay information (NIP-11)
   RelayInfo getRelayInfo() {
     return RelayInfo.embedded();
