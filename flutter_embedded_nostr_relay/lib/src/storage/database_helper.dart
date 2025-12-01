@@ -179,7 +179,18 @@ class DatabaseHelper {
         metadata TEXT
       );
     ''');
-    
+
+    // Published events table for tracking successful publishes to external relays
+    await db.execute('''
+      CREATE TABLE published_events (
+        relay_url TEXT NOT NULL,
+        event_id TEXT NOT NULL,
+        published_at INTEGER NOT NULL,
+
+        PRIMARY KEY (relay_url, event_id)
+      );
+    ''');
+
     // Create indexes
     await _createIndexes(db);
   }
@@ -208,15 +219,29 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_tags_p ON tags(tag_name, tag_value) WHERE tag_name = \'p\';');
     await db.execute('CREATE INDEX idx_tags_a ON tags(tag_name, tag_value) WHERE tag_name = \'a\';');
     await db.execute('CREATE INDEX idx_tags_d ON tags(tag_name, tag_value) WHERE tag_name = \'d\';');
+
+    // Published events indexes
+    await db.execute('CREATE INDEX idx_published_events_relay ON published_events(relay_url);');
+    await db.execute('CREATE INDEX idx_published_events_published_at ON published_events(published_at);');
   }
   
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     RelayLogger.db('upgrade', 'Upgrading database from v$oldVersion to v$newVersion');
-    
-    // Handle future migrations here
+
+    // Migrate from v1 to v2: Add published_events table
     if (oldVersion < 2) {
-      // Example migration
-      // await db.execute('ALTER TABLE events ADD COLUMN new_field TEXT;');
+      RelayLogger.db('upgrade', 'Adding published_events table for tracking successful publishes');
+      await db.execute('''
+        CREATE TABLE published_events (
+          relay_url TEXT NOT NULL,
+          event_id TEXT NOT NULL,
+          published_at INTEGER NOT NULL,
+
+          PRIMARY KEY (relay_url, event_id)
+        );
+      ''');
+      await db.execute('CREATE INDEX idx_published_events_relay ON published_events(relay_url);');
+      await db.execute('CREATE INDEX idx_published_events_published_at ON published_events(published_at);');
     }
   }
   
@@ -294,7 +319,89 @@ class DatabaseHelper {
     }
     return 0;
   }
-  
+
+  // ========== Published Events Methods ==========
+
+  /// Record that an event was successfully published to a relay
+  Future<void> recordPublishedEvent(String relayUrl, String eventId, {int? timestamp}) async {
+    final db = await database;
+    final publishedAt = timestamp ?? DateTime.now().millisecondsSinceEpoch;
+
+    try {
+      await db.insert(
+        'published_events',
+        {
+          'relay_url': relayUrl,
+          'event_id': eventId,
+          'published_at': publishedAt,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      RelayLogger.db('published_events', 'Recorded event $eventId as published to $relayUrl');
+    } catch (e) {
+      RelayLogger.error('Failed to record published event', e);
+    }
+  }
+
+  /// Get all event IDs that have been successfully published to a specific relay
+  Future<Set<String>> getPublishedEventIds(String relayUrl) async {
+    final db = await database;
+    final results = await db.query(
+      'published_events',
+      columns: ['event_id'],
+      where: 'relay_url = ?',
+      whereArgs: [relayUrl],
+    );
+
+    final eventIds = results.map((row) => row['event_id'] as String).toSet();
+    RelayLogger.db('published_events', 'Found ${eventIds.length} published events for $relayUrl');
+    return eventIds;
+  }
+
+  /// Clean up old published event records (older than specified days)
+  Future<void> cleanupOldPublishedRecords({int days = 90}) async {
+    final db = await database;
+    final cutoff = DateTime.now().subtract(Duration(days: days)).millisecondsSinceEpoch;
+
+    final count = await db.delete(
+      'published_events',
+      where: 'published_at < ?',
+      whereArgs: [cutoff],
+    );
+
+    if (count > 0) {
+      RelayLogger.db('published_events', 'Cleaned up $count old published event records (older than $days days)');
+    }
+  }
+
+  /// Get published events statistics
+  Future<Map<String, dynamic>> getPublishedEventsStats() async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT
+        COUNT(*) as total_count,
+        COUNT(DISTINCT relay_url) as relay_count,
+        COUNT(DISTINCT event_id) as unique_events,
+        MIN(published_at) as oldest_published_at,
+        MAX(published_at) as newest_published_at
+      FROM published_events
+    ''');
+
+    if (result.isEmpty || result.first['total_count'] == 0) {
+      return {
+        'total_count': 0,
+        'relay_count': 0,
+        'unique_events': 0,
+        'oldest_published_at': null,
+        'newest_published_at': null,
+      };
+    }
+
+    return result.first;
+  }
+
+  // ========== End Published Events Methods ==========
+
   /// Close the database
   Future<void> close() async {
     if (_database != null) {
